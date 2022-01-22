@@ -76,4 +76,5 @@ RUN chmod +x /start_flower.sh
 # copy application code to WORKDIR
 COPY . ${APP_HOME}
 
-ENTRYPOINT ["/entrypoint"]
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["/start.sh"]

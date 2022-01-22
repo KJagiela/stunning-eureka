@@ -6,6 +6,7 @@ volumes:
 
 services:
   app: &app
+    user: "1000"
     build:
       context: .
       dockerfile: ./compose/local/django/Dockerfile
@@ -21,7 +22,6 @@ services:
       - ./.envs/.local/.postgres
     ports:
       - "8000:8000"
-    command: /start
 
   db:
     image: postgres:14.1-bullseye
