@@ -270,7 +270,7 @@ Session.vim
 tags
 
 ### Project template
-jobbo/media/
+apps/media/
 
 .pytest_cache/
 .ipython/
