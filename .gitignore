@@ -162,8 +162,8 @@ typings/
 # Local History for Visual Studio Code
 .history/
 
-
-
+# PyCharm
+.idea/*
 
 
 ### Windows template
