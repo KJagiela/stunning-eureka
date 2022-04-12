@@ -67,4 +67,22 @@ class JobBoardAdmin(admin.ModelAdmin):
 
 @admin.register(Company)
 class CompanyAdmin(admin.ModelAdmin):
-    """Register Company model in admin panel."""
+    list_display = ('name', 'industry', 'no_of_employees', 'url')
+    actions = ('deduplicate',)
+
+    @admin.action(description='Deduplicate companies')
+    def deduplicate(self, request, queryset):
+        for company in queryset:
+            name = company.name.replace('sp. z o.o.', '')
+            duplicated_companies = Company.objects.filter(
+                name__icontains=name,
+            ).exclude(pk=company.pk)
+            if duplicated_companies.exists():
+                duplicated_company = duplicated_companies.first()
+                company.industry = company.industry or duplicated_company.industry
+                company.no_of_employees = (
+                    company.no_of_employees or duplicated_company.no_of_employees
+                )
+                company.url = company.url or duplicated_company.url
+                company.save()
+                duplicated_company.delete()

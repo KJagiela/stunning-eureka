@@ -13,6 +13,7 @@ from .models import (
     Job,
     JobBoard,
     JobCategory,
+    JobLocation,
     JobSalary,
     Technology,
 )
@@ -58,7 +59,7 @@ class NoFluffDownloader(BaseDownloader):
 
         resp_data = response.json()
         for company in tqdm(resp_data['items']):
-            if Company.objects.filter(name=company['name']).exists():
+            if Company.objects.get_possible_duplicates(name=company['name']).exists():
                 continue
             additional_company_data = self._scrap_company_page(company)
 
@@ -119,7 +120,20 @@ class NoFluffDownloader(BaseDownloader):
             title=job['title'],
             url=job['url'],
         )
-        job_instance.add_locations(job['location'])
+        self._add_locations(job_instance, job['location'])
+
+    @staticmethod
+    def _add_locations(job_instance, location_entries):
+        is_remote = location_entries['fullyRemote']
+        is_covid_remote = location_entries['covidTimeRemotely']
+        for location in location_entries['places']:
+            JobLocation.objects.create(
+                job=job_instance,
+                is_remote=is_remote,
+                is_covid_remote=is_covid_remote,
+                city=location.get('city', ''),
+                street=location.get('street', ''),
+            )
 
     @staticmethod
     def _add_salary(salary_data):
@@ -128,4 +142,90 @@ class NoFluffDownloader(BaseDownloader):
             amount_to=salary_data['to'],
             job_type=salary_data['type'],
             amount_currency=salary_data['currency'],
+        )
+
+
+class JustJoinItDownloader(BaseDownloader):
+    jobs_url = 'https://justjoin.it/api/offers'
+    companies_url = 'https://justjoin.it/api/offers'
+
+    @cached_property
+    def job_board(self):
+        return JobBoard.objects.get(name='justjoin.it')
+
+    def download_companies(self):
+        """
+        There is no need to download companies.
+
+        The companies data is downloaded from the same API that the jobs.
+        """
+
+    def download_jobs(self):
+        response = requests.get(self.jobs_url)
+        try:
+            response.raise_for_status()
+        except requests.HTTPError:
+            logger.error('Whoops, couldnt get offers from JustJoin.')
+        jobs = response.json()
+        for job in tqdm(jobs):
+            if Job.objects.filter(original_id=job['id']).exists():
+                continue
+            self._add_job(job)
+
+    def _add_job(self, job):
+        if all(job_type['salary'] is None for job_type in job['employment_types']):
+            # we do not add jobs without salary
+            return
+        category, _ = JobCategory.objects.get_or_create(name=job['marker_icon'])
+        salary = self._add_salary(job['employment_types'])
+        if Company.objects.get_possible_duplicates(job['company_name']).exists():
+            # we do not add duplicated companies
+            return
+        company = Company.objects.create(
+            name=job['company_name'],
+            defaults={
+                'no_of_employees': job['company_size'],
+                'url': job['company_url'],
+            },
+        )
+        technology, _ = Technology.objects.get_or_create(
+            name=job['marker_icon'],
+        )
+        job_instance = Job.objects.create(
+            original_id=job['id'],
+            board=self.job_board,
+            category=category,
+            technology=technology,
+            salary=salary,
+            company=company,
+            title=job['title'],
+            url=f'https://justjoin.it/offers/{job["id"]}',
+        )
+        self._add_locations(job_instance, job)
+
+    @staticmethod
+    def _add_salary(salary_data):
+        b2b_salary = [
+            salary
+            for salary in salary_data
+            if salary['type'] == 'b2b'
+        ]
+        salary = b2b_salary[0] if b2b_salary else salary_data[0]
+        return JobSalary.objects.create(
+            amount_from=salary['salary']['from'],
+            amount_to=salary['salary']['to'],
+            job_type=salary['type'],
+            amount_currency=salary['salary']['currency'],
+        )
+
+    @staticmethod
+    def _add_locations(job_instance, job_raw_data):
+        is_remote = job_raw_data['workplace_type'] == 'remote'
+        is_covid_remote = job_raw_data['remote_interview']
+        JobLocation.objects.create(
+            job=job_instance,
+            is_remote=is_remote,
+            is_covid_remote=is_covid_remote,
+            city=job_raw_data['city'],
+            street=job_raw_data['street'],
         )

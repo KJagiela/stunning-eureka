@@ -1,5 +1,7 @@
 from django.db import models
 
+from apps.grabbo.managers import CompanyManager
+
 
 class JobBoard(models.Model):
     name = models.CharField(max_length=32)
@@ -13,6 +15,8 @@ class Company(models.Model):
     industry = models.CharField(max_length=255, blank=True)
     no_of_employees = models.CharField(max_length=32, default='', blank=True)
     url = models.CharField(max_length=1024, default='', blank=True)
+
+    objects = CompanyManager()
 
     def __str__(self):
         return self.name
@@ -70,22 +74,10 @@ class Job(models.Model):
         null=True,
     )
     salary = models.ForeignKey('grabbo.JobSalary', on_delete=models.PROTECT)
-    original_id = models.CharField(max_length=64)
+    original_id = models.CharField(max_length=256)
     company = models.ForeignKey('grabbo.Company', on_delete=models.SET_NULL, null=True)
-    title = models.CharField(max_length=64)
+    title = models.CharField(max_length=256)
     url = models.CharField(max_length=256)
 
     def __str__(self):
         return f'{self.title} in {self.company}'
-
-    def add_locations(self, location_entries):
-        is_remote = location_entries['fullyRemote']
-        is_covid_remote = location_entries['covidTimeRemotely']
-        for location in location_entries['places']:
-            JobLocation.objects.create(
-                job=self,
-                is_remote=is_remote,
-                is_covid_remote=is_covid_remote,
-                city=location.get('city', ''),
-                street=location.get('street', ''),
-            )
