@@ -13,13 +13,20 @@ class JobBoard(models.Model):
 class Company(models.Model):
     name = models.CharField(max_length=255)
     industry = models.CharField(max_length=255, blank=True)
-    no_of_employees = models.CharField(max_length=32, default='', blank=True)
-    url = models.CharField(max_length=1024, default='', blank=True)
+    size = models.CharField(max_length=32, blank=True)
+    url = models.CharField(max_length=1024, blank=True)
 
     objects = CompanyManager()
 
     def __str__(self):
         return self.name
+
+    def update_if_better(self, industry, size, url):
+        self.industry = self.industry or industry
+        self.size = self.size or size
+        self.url = self.url or url
+        self.save()
+        return self
 
 
 class JobLocation(models.Model):

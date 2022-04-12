@@ -37,7 +37,7 @@ class JobAdmin(admin.ModelAdmin):
 
     @admin.display(description='Company size')
     def company_size(self, obj):
-        return obj.company.no_of_employees
+        return obj.company.size
 
 
 @admin.register(JobSalary)
@@ -67,7 +67,7 @@ class JobBoardAdmin(admin.ModelAdmin):
 
 @admin.register(Company)
 class CompanyAdmin(admin.ModelAdmin):
-    list_display = ('name', 'industry', 'no_of_employees', 'url')
+    list_display = ('name', 'industry', 'size', 'url')
     actions = ('deduplicate',)
 
     @admin.action(description='Deduplicate companies')
@@ -75,14 +75,12 @@ class CompanyAdmin(admin.ModelAdmin):
         for company in queryset:
             name = company.name.replace('sp. z o.o.', '')
             duplicated_companies = Company.objects.filter(
-                name__icontains=name,
+                name__iexact=name,
             ).exclude(pk=company.pk)
             if duplicated_companies.exists():
                 duplicated_company = duplicated_companies.first()
                 company.industry = company.industry or duplicated_company.industry
-                company.no_of_employees = (
-                    company.no_of_employees or duplicated_company.no_of_employees
-                )
+                company.size = company.size or duplicated_company.size
                 company.url = company.url or duplicated_company.url
                 company.save()
                 duplicated_company.delete()

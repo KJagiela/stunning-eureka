@@ -59,10 +59,18 @@ class NoFluffDownloader(BaseDownloader):
 
         resp_data = response.json()
         for company in tqdm(resp_data['items']):
-            if Company.objects.get_possible_duplicates(name=company['name']).exists():
-                continue
+            possible_companies = Company.objects.get_possible_match(
+                name=company['name'],
+            )
+            # if 0 or more than 1 possible matches, we create a new company
+            # if there's more than 1, we can't be sure that this is the same one,
+            # so we create a new company
             additional_company_data = self._scrap_company_page(company)
-
+            if possible_companies.count() == 1:
+                possible_companies.first().update_if_better(
+                    **additional_company_data,
+                )
+                continue
             Company.objects.create(
                 name=company['name'],
                 **additional_company_data,
@@ -178,16 +186,7 @@ class JustJoinItDownloader(BaseDownloader):
             return
         category, _ = JobCategory.objects.get_or_create(name=job['marker_icon'])
         salary = self._add_salary(job['employment_types'])
-        if Company.objects.get_possible_duplicates(job['company_name']).exists():
-            # we do not add duplicated companies
-            return
-        company = Company.objects.create(
-            name=job['company_name'],
-            defaults={
-                'no_of_employees': job['company_size'],
-                'url': job['company_url'],
-            },
-        )
+        company = self._add_or_update_company(job)
         technology, _ = Technology.objects.get_or_create(
             name=job['marker_icon'],
         )
@@ -202,6 +201,24 @@ class JustJoinItDownloader(BaseDownloader):
             url=f'https://justjoin.it/offers/{job["id"]}',
         )
         self._add_locations(job_instance, job)
+
+    @staticmethod
+    def _add_or_update_company(job):
+        possible_companies = Company.objects.get_possible_match(job['company_name'])
+        if possible_companies.count() == 1:
+            # if we have only one possible match, let's update if
+            return possible_companies.first().update_if_better(
+                size=job['company_size'],
+                url=job['company_url'],
+            )
+        # if 0 or more than 1 possible matches, we create a new company
+        # if there's more than 1, we can't be sure that this is the same one,
+        # so we create a new company
+        return Company.objects.create(
+            name=job['company_name'],
+            size=job['company_size'],
+            url=job['company_url'],
+        )
 
     @staticmethod
     def _add_salary(salary_data):
