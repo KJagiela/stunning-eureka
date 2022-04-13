@@ -37,7 +37,7 @@ class JobAdmin(admin.ModelAdmin):
 
     @admin.display(description='Company size')
     def company_size(self, obj):
-        return obj.company.size
+        return f'{obj.company.size_from} - {obj.company.size_to}'
 
 
 @admin.register(JobSalary)
@@ -67,7 +67,7 @@ class JobBoardAdmin(admin.ModelAdmin):
 
 @admin.register(Company)
 class CompanyAdmin(admin.ModelAdmin):
-    list_display = ('name', 'industry', 'size', 'url')
+    list_display = ('name', 'industry', 'size_from', 'size_to', 'url')
     actions = ('deduplicate',)
 
     @admin.action(description='Deduplicate companies')

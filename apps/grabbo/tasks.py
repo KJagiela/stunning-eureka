@@ -202,22 +202,22 @@ class JustJoinItDownloader(BaseDownloader):
         )
         self._add_locations(job_instance, job)
 
-    @staticmethod
-    def _add_or_update_company(job):
+    def _add_or_update_company(self, job):
         possible_companies = Company.objects.get_possible_match(job['company_name'])
+        size = self._parse_company_size(job['company_size'])
         if possible_companies.count() == 1:
             # if we have only one possible match, let's update if
             return possible_companies.first().update_if_better(
-                size=job['company_size'],
                 url=job['company_url'],
+                **size,
             )
         # if 0 or more than 1 possible matches, we create a new company
         # if there's more than 1, we can't be sure that this is the same one,
         # so we create a new company
         return Company.objects.create(
             name=job['company_name'],
-            size=job['company_size'],
             url=job['company_url'],
+            **size,
         )
 
     @staticmethod
@@ -246,3 +246,61 @@ class JustJoinItDownloader(BaseDownloader):
             city=job_raw_data['city'],
             street=job_raw_data['street'],
         )
+
+    @staticmethod
+    def _parse_company_size(size):  # noqa: WPS210, WPS212
+        """
+        Parse company size from string to a pair of ints.
+
+        There is no unified way the size is represented, so we need to check
+        which type of size it is.
+
+        Ignores are: too many variables, too many return statements.
+        But since this method only parses the size, it can have as many returns
+        and variables as it likes.
+        """
+        # TODO: class method?
+        # TODO: bump to 10 and pattern match? :>
+        chars_to_remove = {',', ' ', '.'}
+        for char in chars_to_remove:
+            size = size.replace(char, '')
+        try:
+            size_exact = int(size)
+        except ValueError:
+            # If not a number, we assume it's a range.
+            pass  # noqa: WPS420 - no consequences if it's not a number
+        else:
+            return {
+                'size_from': size_exact,
+                'size_to': size_exact,
+            }
+        if '+-' in size:
+            size_approximate = int(size.strip('+-').strip())
+            return {
+                'size_from': int(size_approximate * 0.9),  # noqa: WPS432 magic number
+                'size_to': int(size_approximate * 1.1),  # noqa: WPS432 magic number
+            }
+        if '-' in size:
+            split_size = size.split('-')
+            return {
+                'size_from': int(split_size[0].strip()),
+                'size_to': int(split_size[1].strip()),
+            }
+        if '+' in size:
+            size_from = int(size.strip('+').strip())
+            return {
+                'size_from': size_from,
+                'size_to': 2 * size_from,
+            }
+        if '<' in size:
+            return {
+                'size_from': 0,
+                'size_to': int(size.strip('<').strip()),
+            }
+        if '>' in size:
+            size_from = int(size.strip('>').strip())
+            return {
+                'size_from': size_from,
+                'size_to': 2 * size_from,
+            }
+        raise ValueError(f'Unknown size: {size}')

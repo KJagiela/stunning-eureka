@@ -13,7 +13,8 @@ class JobBoard(models.Model):
 class Company(models.Model):
     name = models.CharField(max_length=255)
     industry = models.CharField(max_length=255, blank=True)
-    size = models.CharField(max_length=32, blank=True)
+    size_from = models.IntegerField()
+    size_to = models.IntegerField()
     url = models.CharField(max_length=1024, blank=True)
 
     objects = CompanyManager()
@@ -21,9 +22,10 @@ class Company(models.Model):
     def __str__(self):
         return self.name
 
-    def update_if_better(self, industry, size, url):
+    def update_if_better(self, industry='', size_from=None, size_to=None, url=''):
         self.industry = self.industry or industry
-        self.size = self.size or size
+        self.size_from = self.size_from or size_from
+        self.size_to = self.size_to or size_to
         self.url = self.url or url
         self.save()
         return self
@@ -80,6 +82,7 @@ class Job(models.Model):
         on_delete=models.SET_NULL,
         null=True,
     )
+    # TODO: maybe the relation should be the other way round?
     salary = models.ForeignKey('grabbo.JobSalary', on_delete=models.PROTECT)
     original_id = models.CharField(max_length=256)
     company = models.ForeignKey('grabbo.Company', on_delete=models.SET_NULL, null=True)
