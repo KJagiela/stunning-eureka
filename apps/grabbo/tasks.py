@@ -72,7 +72,7 @@ class NoFluffDownloader(BaseDownloader):
                 )
                 continue
             Company.objects.create(
-                name=company['name'],
+                name=company['name'].replace('sp. z o.o.', ''),
                 **additional_company_data,
             )
 

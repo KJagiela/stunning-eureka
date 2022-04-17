@@ -1,4 +1,6 @@
 from django.contrib import admin
+from django.db.models import QuerySet
+from django.http import HttpRequest
 
 from .models import (
     Company,
@@ -71,16 +73,17 @@ class CompanyAdmin(admin.ModelAdmin):
     actions = ('deduplicate',)
 
     @admin.action(description='Deduplicate companies')
-    def deduplicate(self, request, queryset):
+    def deduplicate(self, request: HttpRequest, queryset: QuerySet[Company]) -> None:
         for company in queryset:
-            name = company.name.replace('sp. z o.o.', '')
-            duplicated_companies = Company.objects.filter(
-                name__iexact=name,
-            ).exclude(pk=company.pk)
+            duplicated_companies = (
+                Company.objects.get_possible_match(company.name).exclude(pk=company.pk)
+            )
             if duplicated_companies.exists():
                 duplicated_company = duplicated_companies.first()
-                company.industry = company.industry or duplicated_company.industry
-                company.size = company.size or duplicated_company.size
-                company.url = company.url or duplicated_company.url
-                company.save()
+                company.update_if_better(
+                    industry=duplicated_company.industry,
+                    size_from=duplicated_company.size_from,
+                    size_to=duplicated_company.size_to,
+                    url=duplicated_company.url,
+                )
                 duplicated_company.delete()
