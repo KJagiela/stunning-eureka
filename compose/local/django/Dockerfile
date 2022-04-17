@@ -3,26 +3,6 @@ ARG PYTHON_VERSION=3.9-slim-bullseye
 # define an alias for the specfic python version used in this file.
 FROM python:${PYTHON_VERSION} as python
 
-# Python build stage
-FROM python as python-build-stage
-
-ARG BUILD_ENVIRONMENT=local
-
-# Install apt packages
-RUN apt-get update && apt-get install --no-install-recommends -y \
-  # dependencies for building Python packages
-  build-essential \
-  # psycopg2 dependencies
-  libpq-dev
-
-# Requirements are installed here to ensure they will be cached.
-COPY ./requirements .
-
-# Create Python Dependency and Sub-Dependency Wheels.
-RUN pip wheel --wheel-dir /usr/src/app/wheels  \
-  -r ${BUILD_ENVIRONMENT}.txt
-
-
 # Python 'run' stage
 FROM python as python-run-stage
 
@@ -41,17 +21,11 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   libpq-dev \
   # Translations dependencies
   gettext \
+  # dependencies for building Python packages
+  build-essential \
   # cleaning up unused files
   && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
   && rm -rf /var/lib/apt/lists/*
-
-# All absolute dir copies ignore workdir instruction. All relative dir copies are wrt to the workdir instruction
-# copy python dependency wheels from python-build-stage
-COPY --from=python-build-stage /usr/src/app/wheels  /wheels/
-
-# use wheels to install python dependencies
-RUN pip install --no-cache-dir --no-index --find-links=/wheels/ /wheels/* \
-	&& rm -rf /wheels/
 
 COPY ./compose/production/django/entrypoint.sh /entrypoint.sh
 RUN sed -i 's/\r$//g' /entrypoint.sh
@@ -72,6 +46,12 @@ RUN chmod +x /start_beat.sh
 COPY ./compose/local/django/celery/start_flower.sh /start_flower.sh
 RUN sed -i 's/\r$//g' /start_flower.sh
 RUN chmod +x /start_flower.sh
+
+# Requirements are installed here to ensure they will be cached.
+COPY ./requirements .
+
+# Create Python Dependency and Sub-Dependency Wheels.
+RUN pip install -r ${BUILD_ENVIRONMENT}.txt
 
 # copy application code to WORKDIR
 COPY . ${APP_HOME}
