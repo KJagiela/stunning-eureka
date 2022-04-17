@@ -273,6 +273,7 @@ tags
 apps/media/
 
 .pytest_cache/
+.tests_reports/
 .ipython/
 .env
 .envs/*
