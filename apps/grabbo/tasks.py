@@ -149,7 +149,7 @@ class NoFluffDownloader(BaseDownloader):
             amount_from=salary_data['from'],
             amount_to=salary_data['to'],
             job_type=salary_data['type'],
-            amount_currency=salary_data['currency'],
+            currency=salary_data['currency'],
         )
 
 
@@ -232,7 +232,7 @@ class JustJoinItDownloader(BaseDownloader):
             amount_from=salary['salary']['from'],
             amount_to=salary['salary']['to'],
             job_type=salary['type'],
-            amount_currency=salary['salary']['currency'],
+            currency=salary['salary']['currency'],
         )
 
     @staticmethod

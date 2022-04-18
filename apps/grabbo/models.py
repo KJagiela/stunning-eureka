@@ -6,7 +6,7 @@ from apps.grabbo.managers import CompanyManager
 class JobBoard(models.Model):
     name = models.CharField(max_length=32)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
 
@@ -19,10 +19,16 @@ class Company(models.Model):
 
     objects = CompanyManager()
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
-    def update_if_better(self, industry='', size_from=None, size_to=None, url=''):
+    def update_if_better(
+        self,
+        industry: str = '',
+        size_from: int = 0,
+        size_to: int = 0,
+        url: str = '',
+    ) -> 'Company':
         self.industry = self.industry or industry
         self.size_from = self.size_from or size_from
         self.size_to = self.size_to or size_to
@@ -38,32 +44,32 @@ class JobLocation(models.Model):
     city = models.CharField(max_length=32, null=True, blank=True)
     street = models.CharField(max_length=128, null=True, blank=True)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'{self.city}, {self.street}'
 
 
 class JobCategory(models.Model):
     name = models.CharField(max_length=32)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
 
 class Technology(models.Model):
     name = models.CharField(max_length=32)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
 
 class JobSalary(models.Model):
     amount_from = models.IntegerField()
     amount_to = models.IntegerField()
-    amount_currency = models.CharField(max_length=4)
+    currency = models.CharField(max_length=4)
     job_type = models.CharField(max_length=32)
 
-    def __str__(self):
-        return f'{self.amount_from} - {self.amount_to} {self.amount_currency}'
+    def __str__(self) -> str:
+        return f'{self.amount_from} - {self.amount_to} {self.currency}'
 
 
 class Job(models.Model):
@@ -89,5 +95,5 @@ class Job(models.Model):
     title = models.CharField(max_length=256)
     url = models.CharField(max_length=256)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'{self.title} in {self.company}'

@@ -2,9 +2,15 @@ import pytest
 
 from pytest_factoryboy import register
 
-from apps.grabbo.tests.factories import CompanyFactory
+from apps.grabbo.tests import factories as grabbo_factories
 
-register(CompanyFactory)
+register(grabbo_factories.JobBoardFactory)
+register(grabbo_factories.CompanyFactory)
+register(grabbo_factories.JobLocationFactory)
+register(grabbo_factories.JobCategoryFactory)
+register(grabbo_factories.TechnologyFactory)
+register(grabbo_factories.JobSalaryFactory)
+register(grabbo_factories.JobFactory)
 
 
 @pytest.fixture(autouse=True)
