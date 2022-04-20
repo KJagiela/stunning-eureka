@@ -50,7 +50,7 @@ class BaseDownloader(ABC):
         """
         # TODO: class method?
         # TODO: bump to 10 and pattern match? :>
-        chars_to_remove = {',', ' ', '.'}
+        chars_to_remove = {',', ' ', '.', "'"}
         for char in chars_to_remove:
             size = size.replace(char, '')
         try:
