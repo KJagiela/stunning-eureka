@@ -5,18 +5,22 @@ ipdb==0.13.9  # https://github.com/gotcha/ipdb
 psycopg2==2.9.3  # https://github.com/psycopg/psycopg2
 watchgod==0.7  # https://github.com/samuelcolvin/watchgod
 
-# Testing
+# Typing
 # ------------------------------------------------------------------------------
 mypy==0.931  # https://github.com/python/mypy
 django-stubs==1.9.0  # https://github.com/typeddjango/django-stubs
 types-requests==2.27.16  # https://github.com/python/typeshed
+djangorestframework-stubs==1.4.0  # https://github.com/typeddjango/djangorestframework-stubs
+
+# Testing
+# ------------------------------------------------------------------------------
 pytest==6.2.5  # https://github.com/pytest-dev/pytest
 pytest-cov==3.0.0  # https://github.com/pytest-dev/pytest-cov
 pytest-deadfixtures==2.2.1  # https://github.com/jllorencetti/pytest-deadfixtures
 pytest-factoryboy==2.1.0  # https://github.com/pytest-dev/pytest-factoryboy
 pytest-mock==3.7.0  # https://github.com/pytest-dev/pytest-mock/
 pytest-sugar==0.9.4  # https://github.com/Frozenball/pytest-sugar
-djangorestframework-stubs==1.4.0  # https://github.com/typeddjango/djangorestframework-stubs
+requests-mock==1.9.3  # https://github.com/jamielennox/requests-mock
 
 # Documentation
 # ------------------------------------------------------------------------------

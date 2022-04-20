@@ -25,15 +25,74 @@ class BaseDownloader(ABC):
     companies_url: str = ''
     jobs_url: str = ''
 
+    def download(self):
+        self.download_companies()
+        self.download_jobs()
+
     def download_companies(self):
+        # TODO: private method
         raise NotImplementedError('You must implement this method')
 
     def download_jobs(self):
         raise NotImplementedError('You must implement this method')
 
-    def download(self):
-        self.download_companies()
-        self.download_jobs()
+    @staticmethod
+    def _parse_company_size(size):  # noqa: WPS210, WPS212
+        """
+        Parse company size from string to a pair of ints.
+
+        There is no unified way the size is represented, so we need to check
+        which type of size it is.
+
+        Ignores are: too many variables, too many return statements.
+        But since this method only parses the size, it can have as many returns
+        and variables as it likes.
+        """
+        # TODO: class method?
+        # TODO: bump to 10 and pattern match? :>
+        chars_to_remove = {',', ' ', '.'}
+        for char in chars_to_remove:
+            size = size.replace(char, '')
+        try:
+            size_exact = int(size)
+        except ValueError:
+            # If not a number, we assume it's a range.
+            pass  # noqa: WPS420 - no consequences if it's not a number
+        else:
+            return {
+                'size_from': size_exact,
+                'size_to': size_exact,
+            }
+        if '+-' in size:
+            size_approximate = int(size.strip('+-').strip())
+            return {
+                'size_from': int(size_approximate * 0.9),  # noqa: WPS432 magic number
+                'size_to': int(size_approximate * 1.1),  # noqa: WPS432 magic number
+            }
+        if '-' in size:
+            split_size = size.split('-')
+            return {
+                'size_from': int(split_size[0].strip()),
+                'size_to': int(split_size[1].strip()),
+            }
+        if '+' in size:
+            size_from = int(size.strip('+').strip())
+            return {
+                'size_from': size_from,
+                'size_to': 2 * size_from,
+            }
+        if '<' in size:
+            return {
+                'size_from': 0,
+                'size_to': int(size.strip('<').strip()),
+            }
+        if '>' in size:
+            size_from = int(size.strip('>').strip())
+            return {
+                'size_from': size_from,
+                'size_to': 2 * size_from,
+            }
+        raise ValueError(f'Unknown size: {size}')
 
 
 class NoFluffDownloader(BaseDownloader):
@@ -47,15 +106,16 @@ class NoFluffDownloader(BaseDownloader):
     )
 
     @cached_property
-    def job_board(self):
+    def job_board(self) -> JobBoard:
         return JobBoard.objects.get(name='nofluff')
 
-    def download_companies(self):
+    def download_companies(self) -> None:
         response = requests.get(self.companies_url)
         try:
             response.raise_for_status()
         except requests.HTTPError:
             logger.error('Whoops, couldnt get companies from nofluff.')
+            return
 
         resp_data = response.json()
         for company in tqdm(resp_data['items']):
@@ -72,7 +132,7 @@ class NoFluffDownloader(BaseDownloader):
                 )
                 continue
             Company.objects.create(
-                name=company['name'].replace('sp. z o.o.', ''),
+                name=company['name'].replace('sp. z o.o.', '').strip(),
                 **additional_company_data,
             )
 
@@ -105,10 +165,11 @@ class NoFluffDownloader(BaseDownloader):
         company_resp = requests.get(url)
         company_data = BeautifulSoup(company_resp.content, 'html.parser')
         spans = company_data.find(id='company-main').find_all('span')
+        size = self._get_info_from_spans(spans, 'Wielkość firmy')
         return {
             'url': url,
-            'size': self._get_info_from_spans(spans, 'Wielkość firmy'),
             'industry': self._get_info_from_spans(spans, 'Branża'),
+            **self._parse_company_size(size),
         }
 
     def _add_job(self, job):
@@ -246,61 +307,3 @@ class JustJoinItDownloader(BaseDownloader):
             city=job_raw_data['city'],
             street=job_raw_data['street'],
         )
-
-    @staticmethod
-    def _parse_company_size(size):  # noqa: WPS210, WPS212
-        """
-        Parse company size from string to a pair of ints.
-
-        There is no unified way the size is represented, so we need to check
-        which type of size it is.
-
-        Ignores are: too many variables, too many return statements.
-        But since this method only parses the size, it can have as many returns
-        and variables as it likes.
-        """
-        # TODO: class method?
-        # TODO: bump to 10 and pattern match? :>
-        chars_to_remove = {',', ' ', '.'}
-        for char in chars_to_remove:
-            size = size.replace(char, '')
-        try:
-            size_exact = int(size)
-        except ValueError:
-            # If not a number, we assume it's a range.
-            pass  # noqa: WPS420 - no consequences if it's not a number
-        else:
-            return {
-                'size_from': size_exact,
-                'size_to': size_exact,
-            }
-        if '+-' in size:
-            size_approximate = int(size.strip('+-').strip())
-            return {
-                'size_from': int(size_approximate * 0.9),  # noqa: WPS432 magic number
-                'size_to': int(size_approximate * 1.1),  # noqa: WPS432 magic number
-            }
-        if '-' in size:
-            split_size = size.split('-')
-            return {
-                'size_from': int(split_size[0].strip()),
-                'size_to': int(split_size[1].strip()),
-            }
-        if '+' in size:
-            size_from = int(size.strip('+').strip())
-            return {
-                'size_from': size_from,
-                'size_to': 2 * size_from,
-            }
-        if '<' in size:
-            return {
-                'size_from': 0,
-                'size_to': int(size.strip('<').strip()),
-            }
-        if '>' in size:
-            size_from = int(size.strip('>').strip())
-            return {
-                'size_from': size_from,
-                'size_to': 2 * size_from,
-            }
-        raise ValueError(f'Unknown size: {size}')
