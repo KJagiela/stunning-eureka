@@ -161,7 +161,7 @@ class NoFluffDownloader(BaseDownloader):
         except IndexError:
             return ''
 
-    def _scrap_company_page(self, company):
+    def _scrap_company_page(self, company: dict[str, str]) -> dict[str, str]:
         url = f'https://nofluffjobs.com/pl{company["url"]}'
         company_resp = requests.get(url)
         company_data = BeautifulSoup(company_resp.content, 'html.parser')

@@ -13,7 +13,12 @@
     </facet>
   </component>
   <component name="NewModuleRootManager">
-    <content url="file://$MODULE_DIR$" />
+    <content url="file://$MODULE_DIR$">
+      <excludeFolder url="file://$MODULE_DIR$/.mypy_cache" />
+      <excludeFolder url="file://$MODULE_DIR$/.pytest_cache" />
+      <excludeFolder url="file://$MODULE_DIR$/.tests_reports" />
+      <excludeFolder url="file://$MODULE_DIR$/.ipython" />
+    </content>
     <orderEntry type="jdk" jdkName="Remote Python 3.9.12 Docker Compose (app at [\\wsl$\Ubuntu-20.04\home\kasia\repos\jobbo\docker-compose.yml])" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
