@@ -25,19 +25,19 @@ class BaseDownloader(ABC):
     companies_url: str = ''
     jobs_url: str = ''
 
-    def download(self):
+    def download(self) -> None:
         self.download_companies()
         self.download_jobs()
 
-    def download_companies(self):
+    def download_companies(self) -> None:
         # TODO: private method
         raise NotImplementedError('You must implement this method')
 
-    def download_jobs(self):
+    def download_jobs(self) -> None:
         raise NotImplementedError('You must implement this method')
 
     @staticmethod
-    def _parse_company_size(size):  # noqa: WPS210, WPS212
+    def _parse_company_size(size: str) -> dict[str, int]:  # noqa: WPS210, WPS212
         """
         Parse company size from string to a pair of ints.
 
@@ -136,7 +136,7 @@ class NoFluffDownloader(BaseDownloader):
                 **additional_company_data,
             )
 
-    def download_jobs(self):
+    def download_jobs(self) -> None:
         response = requests.post(
             self.jobs_url,
             json={'criteriaSearch': {'requirement': ['python']}, 'page': 1},
@@ -145,6 +145,7 @@ class NoFluffDownloader(BaseDownloader):
             response.raise_for_status()
         except requests.HTTPError:
             logger.error('Whoops, couldnt get offers from NoFluff.')
+            return
         jobs = response.json()
         for job in tqdm(jobs['postings']):
             if Job.objects.filter(original_id=job['id']).exists():
