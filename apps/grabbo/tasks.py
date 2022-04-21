@@ -2,6 +2,7 @@ import logging
 
 from abc import ABC
 from functools import cached_property
+from typing import Union
 
 import requests
 
@@ -19,6 +20,9 @@ from .models import (
 )
 
 logger = logging.getLogger(__name__)
+
+ResponseDictKeys = Union[str, dict[str, str]]
+NestedResponseDict = dict[str, ResponseDictKeys]
 
 
 class BaseDownloader(ABC):
@@ -173,10 +177,13 @@ class NoFluffDownloader(BaseDownloader):
             **self._parse_company_size(size),
         }
 
-    def _add_job(self, job):
+    def _add_job(self, job: NestedResponseDict) -> None:
         category, _ = JobCategory.objects.get_or_create(name=job['category'])
         salary = self._add_salary(job['salary'])
-        company, _ = Company.objects.get_or_create(name=job['name'])
+        company, _ = Company.objects.get_or_create(
+            name=job['name'],
+            defaults={'size_from': 0, 'size_to': 0, 'url': ''},
+        )
         technology, _ = Technology.objects.get_or_create(
             name=job.get('technology', 'Unknown'),
         )

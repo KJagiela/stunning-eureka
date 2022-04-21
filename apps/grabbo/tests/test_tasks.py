@@ -1,7 +1,19 @@
 import pytest
 
 from apps.grabbo import tasks
-from apps.grabbo.models import Company
+from apps.grabbo.models import (
+    Company,
+    Job,
+    JobCategory,
+    JobLocation,
+    JobSalary,
+    Technology,
+)
+
+
+@pytest.fixture
+def no_fluff(job_board_factory):
+    return job_board_factory(name='nofluff')
 
 
 @pytest.mark.parametrize(
@@ -46,8 +58,7 @@ class TestNoFluffCompaniesDownloader:
             },
         )
 
-    def test_job_board_property_returns_nofluff(self, job_board_factory):
-        no_fluff = job_board_factory(name='nofluff')
+    def test_job_board_property_returns_nofluff(self, no_fluff):
         assert tasks.NoFluffDownloader().job_board == no_fluff
 
     def test_download_companies_calls_api(self, requests_mock):
@@ -161,6 +172,31 @@ class TestNoFluffCompaniesHelpers:
 @pytest.mark.django_db
 class TestNoFluffJobsDownloader:
 
+    @pytest.fixture()
+    def full_job_data(self):
+        return {
+            'category': 'it',
+            'salary': {
+                'from': '1000',
+                'to': '2000',
+                'type': 'hourly',
+                'currency': 'PLN',
+            },
+            'name': 'Job 1',
+            'technology': 'Python',
+            'id': '1',
+            'title': 'Job title',
+            'url': 'https://example.com',
+            'location': {
+                'fullyRemote': False,
+                'covidTimeRemotely': True,
+                'places': [{
+                    'city': 'Warsaw',
+                    'street': 'Krakowska',
+                }],
+            },
+        }
+
     def test_download_jobs_logs_error_if_api_returned_error(
         self,
         requests_mock,
@@ -197,3 +233,39 @@ class TestNoFluffJobsDownloader:
         patched_add_job = mocker.patch('apps.grabbo.tasks.NoFluffDownloader._add_job')
         tasks.NoFluffDownloader().download_jobs()
         assert not patched_add_job.called
+
+    def test_add_job_creates_category_if_didnt_exist(self, no_fluff, full_job_data):
+        tasks.NoFluffDownloader()._add_job(full_job_data)
+        assert JobCategory.objects.count() == 1
+        assert JobCategory.objects.first().name == 'it'
+
+    def test_add_job_creates_salary_object_from_data(self, no_fluff, full_job_data):
+        tasks.NoFluffDownloader()._add_job(full_job_data)
+        assert JobSalary.objects.count() == 1
+        assert JobSalary.objects.first().amount_from == 1000
+
+    def test_add_job_creates_company_if_didnt_exist(self, no_fluff, full_job_data):
+        tasks.NoFluffDownloader()._add_job(full_job_data)
+        assert Company.objects.count() == 1
+        assert Company.objects.first().name == 'Job 1'
+
+    def test_add_job_creates_technology_if_didnt_exist(self, no_fluff, full_job_data):
+        tasks.NoFluffDownloader()._add_job(full_job_data)
+        assert Technology.objects.count() == 1
+        assert Technology.objects.first().name == 'Python'
+
+    def test_add_job_creates_job_instance_with_appropriate_foreign_keys(
+        self,
+        no_fluff,
+        full_job_data,
+    ):
+        tasks.NoFluffDownloader()._add_job(full_job_data)
+        assert Job.objects.count() == 1
+        job = Job.objects.first()
+        assert job.category == JobCategory.objects.first()
+        assert job.original_id == '1'
+
+    def test_add_object_adds_locations_from_data(self, no_fluff, full_job_data):
+        tasks.NoFluffDownloader()._add_job(full_job_data)
+        assert JobLocation.objects.count() == 1
+        assert JobLocation.objects.first().city == 'Warsaw'
