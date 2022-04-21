@@ -154,10 +154,10 @@ class NoFluffDownloader(BaseDownloader):
 
     @staticmethod
     def _get_info_from_spans(spans: list, key_to_find: str) -> str:
-        company_size_spans = [span for span in spans if key_to_find in span.string]
+        matching_spans = [span for span in spans if key_to_find in span.string]
         try:
             # only first 32 chars because this is our max
-            return company_size_spans[0].next_sibling.string[:32]  # noqa: WPS432
+            return matching_spans[0].next_sibling.string[:32]  # noqa: WPS432
         except IndexError:
             return ''
 

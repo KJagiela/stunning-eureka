@@ -29,6 +29,19 @@ def test_parse_company_size(size_str, expected_size_from, expected_size_to):
 class TestNoFluffCompaniesDownloader:
 
     @pytest.fixture()
+    def patched_spans(self, mocker):
+        span1 = mocker.MagicMock()
+        span1.string = 'size'
+        span1.next_sibling.string = '1' * 100
+        span2 = mocker.MagicMock()
+        span2.string = 'industry'
+        span2.next_sibling.string = 'it'
+        span3 = mocker.MagicMock()
+        span3.string = 'industry'
+        span3.next_sibling.string = 'marketing'
+        return [span1, span2, span3]
+
+    @pytest.fixture()
     def companies_response(self, requests_mock, mocker):
         requests_mock.get(
             tasks.NoFluffDownloader.companies_url,
@@ -89,6 +102,33 @@ class TestNoFluffCompaniesDownloader:
         company_factory(name='Company 1', size_from=0)
         tasks.NoFluffDownloader().download_companies()
         assert Company.objects.first().size_from == 1234
+
+    def test_get_info_from_spans_returns_data_from_first_matching_span(
+        self,
+        patched_spans,
+    ):
+        assert tasks.NoFluffDownloader._get_info_from_spans(
+            patched_spans,
+            'industry',
+        ) == 'it'
+
+    def test_get_info_returns_only_first_32_characters(  # noqa: WPS114
+        self,
+        patched_spans,
+    ):
+        assert tasks.NoFluffDownloader._get_info_from_spans(
+            patched_spans,
+            'size',
+        ) == '1' * 32
+
+    def test_get_info_returns_empty_string_if_no_matching_span(
+        self,
+        patched_spans,
+    ):
+        assert tasks.NoFluffDownloader._get_info_from_spans(
+            patched_spans,
+            'name',
+        ) == ''
 
 
 @pytest.mark.django_db
