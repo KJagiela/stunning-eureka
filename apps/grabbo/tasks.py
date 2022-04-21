@@ -22,7 +22,9 @@ from .models import (
 logger = logging.getLogger(__name__)
 
 ResponseDictKeys = Union[str, dict[str, str]]
+ResponseList = list[dict[str, str]]
 NestedResponseDict = dict[str, ResponseDictKeys]
+ResponseWithList = dict[str, Union[str, ResponseList]]
 
 
 class BaseDownloader(ABC):
@@ -200,7 +202,7 @@ class NoFluffDownloader(BaseDownloader):
         self._add_locations(job_instance, job['location'])
 
     @staticmethod
-    def _add_locations(job_instance, location_entries):
+    def _add_locations(job_instance: Job, location_entries: ResponseWithList) -> None:
         is_remote = location_entries['fullyRemote']
         is_covid_remote = location_entries['covidTimeRemotely']
         for location in location_entries['places']:
@@ -213,7 +215,7 @@ class NoFluffDownloader(BaseDownloader):
             )
 
     @staticmethod
-    def _add_salary(salary_data):
+    def _add_salary(salary_data: dict[str, str]) -> JobSalary:
         return JobSalary.objects.create(
             amount_from=salary_data['from'],
             amount_to=salary_data['to'],
@@ -227,29 +229,30 @@ class JustJoinItDownloader(BaseDownloader):
     companies_url = 'https://justjoin.it/api/offers'
 
     @cached_property
-    def job_board(self):
+    def job_board(self) -> JobBoard:
         return JobBoard.objects.get(name='justjoin.it')
 
-    def download_companies(self):
+    def download_companies(self) -> None:
         """
         There is no need to download companies.
 
         The companies data is downloaded from the same API that the jobs.
         """
 
-    def download_jobs(self):
+    def download_jobs(self) -> None:
         response = requests.get(self.jobs_url)
         try:
             response.raise_for_status()
         except requests.HTTPError:
             logger.error('Whoops, couldnt get offers from JustJoin.')
+            return
         jobs = response.json()
         for job in tqdm(jobs):
             if Job.objects.filter(original_id=job['id']).exists():
                 continue
             self._add_job(job)
 
-    def _add_job(self, job):
+    def _add_job(self, job: ResponseWithList) -> None:
         if all(job_type['salary'] is None for job_type in job['employment_types']):
             # we do not add jobs without salary
             return
@@ -271,7 +274,7 @@ class JustJoinItDownloader(BaseDownloader):
         )
         self._add_locations(job_instance, job)
 
-    def _add_or_update_company(self, job):
+    def _add_or_update_company(self, job: ResponseWithList) -> Company:
         possible_companies = Company.objects.get_possible_match(job['company_name'])
         size = self._parse_company_size(job['company_size'])
         if possible_companies.count() == 1:
@@ -290,7 +293,7 @@ class JustJoinItDownloader(BaseDownloader):
         )
 
     @staticmethod
-    def _add_salary(salary_data):
+    def _add_salary(salary_data: list[dict[str, ResponseDictKeys]]) -> JobSalary:
         b2b_salary = [
             salary
             for salary in salary_data
@@ -305,7 +308,7 @@ class JustJoinItDownloader(BaseDownloader):
         )
 
     @staticmethod
-    def _add_locations(job_instance, job_raw_data):
+    def _add_locations(job_instance: Job, job_raw_data: ResponseDictKeys) -> None:
         is_remote = job_raw_data['workplace_type'] == 'remote'
         is_covid_remote = job_raw_data['remote_interview']
         JobLocation.objects.create(
