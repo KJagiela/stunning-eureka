@@ -100,7 +100,11 @@ class BaseDownloader(ABC):
         if '(' in size:
             real_size = size.split('(')[0]
             return self._parse_company_size(real_size)
-        raise ValueError(f'Unknown size: {size}')
+        logger.error(f'Unknown size: {size}')
+        return {
+            'size_from': 0,
+            'size_to': 0,
+        }
 
 
 class NoFluffDownloader(BaseDownloader):
@@ -172,15 +176,10 @@ class NoFluffDownloader(BaseDownloader):
         company_data = BeautifulSoup(company_resp.content, 'html.parser')
         spans = company_data.find(id='company-main').find_all('span')
         size = self._get_info_from_spans(spans, 'Wielkość firmy')
-        try:
-            parsed_size = self._parse_company_size(size)
-        except ValueError as ex:
-            print(company)
-            parsed_size = {'size_from': 0, 'size_to': 100000}
         return {
             'url': url,
             'industry': self._get_info_from_spans(spans, 'Branża'),
-            **parsed_size,
+            **self._parse_company_size(size),
         }
 
     def _add_job(self, job: NestedResponseDict) -> None:
@@ -192,7 +191,7 @@ class NoFluffDownloader(BaseDownloader):
                 defaults={'size_from': 0, 'size_to': 0, 'url': ''},
             )
         except Company.MultipleObjectsReturned:
-            print(job['name'])
+            logger.debug(job['name'])
             company = Company.objects.filter(name=job['name']).first()
         technology, _ = Technology.objects.get_or_create(
             name=job.get('technology', 'Unknown'),
@@ -321,25 +320,11 @@ class JustJoinItDownloader(BaseDownloader):
     def _add_locations(job_instance: Job, job_raw_data: ResponseDictKeys) -> None:
         is_remote = job_raw_data['workplace_type'] == 'remote'
         is_covid_remote = job_raw_data['remote_interview']
+        field_size = 32
         JobLocation.objects.create(
             job=job_instance,
             is_remote=is_remote,
             is_covid_remote=is_covid_remote,
-            city=job_raw_data['city'][:32],
-            street=job_raw_data['street'][:32],
+            city=job_raw_data['city'][:field_size],
+            street=job_raw_data['street'][:field_size],
         )
-
-
-def get_mean_pay():
-    fe_ts = Technology.objects.filter(
-        Q(name__icontains='javascript')
-        | Q(name__icontains='vue'),
-    )
-    all_from = []
-    all_to = []
-    for job in Job.objects.filter(technology__in=fe_ts, seniority='senior'):
-        all_from.append(job.salary.amount_from)
-        all_to.append(job.salary.amount_to)
-    mean_from = sum(all_from) / len(all_from)
-    mean_to = sum(all_to) / len(all_to)
-    return mean_from, mean_to

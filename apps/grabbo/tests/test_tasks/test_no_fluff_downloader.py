@@ -1,5 +1,3 @@
-import pytest
-
 from apps.grabbo import tasks
 from apps.grabbo.models import (
     Company,
@@ -9,6 +7,8 @@ from apps.grabbo.models import (
     JobSalary,
     Technology,
 )
+
+import pytest
 
 
 @pytest.fixture
@@ -70,15 +70,6 @@ class TestNoFluffCompaniesDownloader:
         tasks.NoFluffDownloader().download_companies()
         assert Company.objects.count() == 1
         assert Company.objects.first().name == 'Company 1'
-
-    def test_download_companies_updates_company_if_it_already_exists(
-        self,
-        companies_response,
-        company_factory,
-    ):
-        company_factory(name='Company 1', size_from=0)
-        tasks.NoFluffDownloader().download_companies()
-        assert Company.objects.first().size_from == 1234
 
 
 @pytest.mark.django_db
@@ -166,6 +157,7 @@ class TestNoFluffJobsDownloader:
             'id': '1',
             'title': 'Job title',
             'url': 'https://example.com',
+            'seniority': ['junior'],
             'location': {
                 'fullyRemote': False,
                 'covidTimeRemotely': True,

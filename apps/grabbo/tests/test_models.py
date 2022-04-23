@@ -1,6 +1,6 @@
-import pytest
-
 from apps.grabbo.models import Company
+
+import pytest
 
 
 @pytest.mark.django_db

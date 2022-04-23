@@ -1,9 +1,9 @@
-import pytest
-
 from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
 from django.urls import reverse
 
 from apps.grabbo.models import Company
+
+import pytest
 
 
 @pytest.mark.django_db

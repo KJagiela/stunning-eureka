@@ -1,7 +1,5 @@
 from copy import copy
 
-import pytest
-
 from apps.grabbo import tasks
 from apps.grabbo.models import (
     Company,
@@ -11,6 +9,8 @@ from apps.grabbo.models import (
     JobSalary,
     Technology,
 )
+
+import pytest
 
 
 @pytest.fixture
@@ -42,6 +42,7 @@ def full_job_data():
         'technology': 'Python',
         'city': 'Warsaw',
         'street': 'Krakowska',
+        'experience_level': 'junior',
     }
 
 

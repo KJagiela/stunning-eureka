@@ -1,6 +1,6 @@
-import pytest
-
 from apps.grabbo import tasks
+
+import pytest
 
 
 @pytest.mark.parametrize(
@@ -18,7 +18,7 @@ from apps.grabbo import tasks
     ],
 )
 def test_parse_company_size(db, size_str, expected_size_from, expected_size_to):
-    assert tasks.BaseDownloader._parse_company_size(size_str) == {
+    assert tasks.BaseDownloader()._parse_company_size(size_str) == {
         'size_from': expected_size_from,
         'size_to': expected_size_to,
     }
@@ -26,4 +26,4 @@ def test_parse_company_size(db, size_str, expected_size_from, expected_size_to):
 
 def test_parse_company_size_invalid(db):
     with pytest.raises(ValueError):
-        tasks.BaseDownloader._parse_company_size('1234-')
+        tasks.BaseDownloader()._parse_company_size('1234-')

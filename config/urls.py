@@ -6,6 +6,7 @@ from django.urls import (
     path,
 )
 from django.views import defaults as default_views
+
 from drf_spectacular.views import (
     SpectacularAPIView,
     SpectacularSwaggerView,

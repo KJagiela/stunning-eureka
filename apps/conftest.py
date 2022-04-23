@@ -1,8 +1,8 @@
+from apps.grabbo.tests import factories as grabbo_factories
+
 import pytest
 
 from pytest_factoryboy import register
-
-from apps.grabbo.tests import factories as grabbo_factories
 
 register(grabbo_factories.JobBoardFactory)
 register(grabbo_factories.CompanyFactory)
