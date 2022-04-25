@@ -42,8 +42,7 @@ class BaseDownloader(ABC):
     def download_jobs(self) -> None:
         raise NotImplementedError('You must implement this method')
 
-    @staticmethod
-    def _parse_company_size(size: str) -> dict[str, int]:  # noqa: WPS210, WPS212
+    def _parse_company_size(self, size: str) -> dict[str, int]:  # noqa: WPS210, WPS212
         """
         Parse company size from string to a pair of ints.
 
@@ -98,6 +97,9 @@ class BaseDownloader(ABC):
                 'size_from': size_from,
                 'size_to': 2 * size_from,
             }
+        if '(' in size:
+            real_size = size.split('(')[0]
+            return self._parse_company_size(real_size)
         raise ValueError(f'Unknown size: {size}')
 
 
@@ -108,7 +110,7 @@ class NoFluffDownloader(BaseDownloader):
     )
     jobs_url = (
         'https://nofluffjobs.com/api/search/posting?'
-        + 'limit=4000&offset=0&salaryCurrency=PLN&salaryPeriod=month&region=pl'
+        + 'limit=40000&offset=0&salaryCurrency=PLN&salaryPeriod=month&region=pl'
     )
 
     @cached_property
@@ -131,12 +133,9 @@ class NoFluffDownloader(BaseDownloader):
             # if 0 or more than 1 possible matches, we create a new company
             # if there's more than 1, we can't be sure that this is the same one,
             # so we create a new company
-            additional_company_data = self._scrap_company_page(company)
             if possible_companies.count() == 1:
-                possible_companies.first().update_if_better(
-                    **additional_company_data,
-                )
                 continue
+            additional_company_data = self._scrap_company_page(company)
             Company.objects.create(
                 name=company['name'].replace('sp. z o.o.', '').strip(),
                 **additional_company_data,
@@ -145,7 +144,7 @@ class NoFluffDownloader(BaseDownloader):
     def download_jobs(self) -> None:
         response = requests.post(
             self.jobs_url,
-            json={'criteriaSearch': {'requirement': ['python']}, 'page': 1},
+            json={'criteriaSearch': {}, 'page': 1},
         )
         try:
             response.raise_for_status()
@@ -173,19 +172,28 @@ class NoFluffDownloader(BaseDownloader):
         company_data = BeautifulSoup(company_resp.content, 'html.parser')
         spans = company_data.find(id='company-main').find_all('span')
         size = self._get_info_from_spans(spans, 'Wielkość firmy')
+        try:
+            parsed_size = self._parse_company_size(size)
+        except ValueError as ex:
+            print(company)
+            parsed_size = {'size_from': 0, 'size_to': 100000}
         return {
             'url': url,
             'industry': self._get_info_from_spans(spans, 'Branża'),
-            **self._parse_company_size(size),
+            **parsed_size,
         }
 
     def _add_job(self, job: NestedResponseDict) -> None:
         category, _ = JobCategory.objects.get_or_create(name=job['category'])
         salary = self._add_salary(job['salary'])
-        company, _ = Company.objects.get_or_create(
-            name=job['name'],
-            defaults={'size_from': 0, 'size_to': 0, 'url': ''},
-        )
+        try:
+            company, _ = Company.objects.get_or_create(
+                name=job['name'],
+                defaults={'size_from': 0, 'size_to': 0, 'url': ''},
+            )
+        except Company.MultipleObjectsReturned:
+            print(job['name'])
+            company = Company.objects.filter(name=job['name']).first()
         technology, _ = Technology.objects.get_or_create(
             name=job.get('technology', 'Unknown'),
         )
@@ -196,6 +204,7 @@ class NoFluffDownloader(BaseDownloader):
             technology=technology,
             salary=salary,
             company=company,
+            seniority=job['seniority'][0].lower(),
             title=job['title'],
             url=job['url'],
         )
@@ -269,6 +278,7 @@ class JustJoinItDownloader(BaseDownloader):
             technology=technology,
             salary=salary,
             company=company,
+            seniority=job['experience_level'].lower(),
             title=job['title'],
             url=f'https://justjoin.it/offers/{job["id"]}',
         )
@@ -315,6 +325,21 @@ class JustJoinItDownloader(BaseDownloader):
             job=job_instance,
             is_remote=is_remote,
             is_covid_remote=is_covid_remote,
-            city=job_raw_data['city'],
-            street=job_raw_data['street'],
+            city=job_raw_data['city'][:32],
+            street=job_raw_data['street'][:32],
         )
+
+
+def get_mean_pay():
+    fe_ts = Technology.objects.filter(
+        Q(name__icontains='javascript')
+        | Q(name__icontains='vue'),
+    )
+    all_from = []
+    all_to = []
+    for job in Job.objects.filter(technology__in=fe_ts, seniority='senior'):
+        all_from.append(job.salary.amount_from)
+        all_to.append(job.salary.amount_to)
+    mean_from = sum(all_from) / len(all_from)
+    mean_to = sum(all_to) / len(all_to)
+    return mean_from, mean_to

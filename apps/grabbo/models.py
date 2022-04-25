@@ -90,6 +90,8 @@ class Job(models.Model):
     )
     # TODO: maybe the relation should be the other way round?
     salary = models.ForeignKey('grabbo.JobSalary', on_delete=models.PROTECT)
+    # TODO: model?
+    seniority = models.CharField(max_length=256)
     original_id = models.CharField(max_length=256)
     company = models.ForeignKey('grabbo.Company', on_delete=models.SET_NULL, null=True)
     title = models.CharField(max_length=256)
