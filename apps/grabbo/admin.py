@@ -2,6 +2,12 @@ from django.contrib import admin
 from django.db.models import QuerySet
 from django.http import HttpRequest
 
+from .filters import (
+    CompanySizeFilter,
+    SalaryFilter,
+    SeniorityFilter,
+    TechnologyFilter,
+)
 from .models import (
     Company,
     Job,
@@ -24,6 +30,7 @@ class JobAdmin(admin.ModelAdmin):
         'salary_from',
         'salary_to',
     )
+    list_filter = (CompanySizeFilter, SeniorityFilter, TechnologyFilter, SalaryFilter)
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
