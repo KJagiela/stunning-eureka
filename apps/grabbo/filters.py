@@ -1,10 +1,29 @@
 from django.contrib import admin
 from django.db import models
 
-from apps.grabbo.models import (
-    Job,
-    JobSalary,
-)
+from apps.grabbo.models import Job
+
+
+class InputFilter(admin.SimpleListFilter):
+    """
+    A direct copy-paste of a thing found online.
+
+    https://hakibenita.com/how-to-add-a-text-filter-to-django-admin
+    """
+
+    template = 'admin/input_filter.html'
+
+    def lookups(self, request, model_admin):
+        return ((), )
+
+    def choices(self, changelist):
+        all_choice = next(super().choices(changelist))
+        all_choice['query_parts'] = (
+            (param_name, param_val)
+            for param_name, param_val in changelist.get_filters_params().items()
+            if param_name != self.parameter_name
+        )
+        yield all_choice
 
 
 class CompanySizeFilter(admin.SimpleListFilter):
@@ -72,23 +91,14 @@ class SeniorityFilter(admin.SimpleListFilter):
         return queryset
 
 
-class SalaryFilter(admin.SimpleListFilter):
-    title = 'salary'
-    parameter_name = 'salary'
-
-    def lookups(self, request, model_admin):
-        salaries = JobSalary.objects.aggregate(
-            minimal=models.Min('amount_from'),
-            maximal=models.Max('amount_to'),
-        )
-        no_of_buckets = 10
-        step = (salaries['maximal'] - salaries['minimal']) / no_of_buckets
-        return [
-            f'{bucket * step}-{(bucket + 1) * step}'
-            for bucket in range(no_of_buckets)
-        ]
+class SalaryFilter(InputFilter):
+    parameter_name = 'min_salary'
+    title = 'min_salary'
 
     def queryset(self, request, queryset):
-        if self.value():
-            return queryset.filter(seniority=self.value())
-        return queryset
+        if self.value() is not None:
+            min_salary = self.value()
+
+            return queryset.filter(
+                salary__amount_to__gte=min_salary,
+            )

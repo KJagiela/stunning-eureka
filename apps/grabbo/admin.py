@@ -34,7 +34,7 @@ class JobAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        return qs.prefetch_related('salary', 'category')
+        return qs.prefetch_related('salary', 'category', 'board', 'company')
 
     @admin.display(description='Salary min')
     def salary_from(self, obj):
