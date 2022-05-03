@@ -170,7 +170,10 @@ class NoFluffDownloader(BaseDownloader):
         except IndexError:
             return ''
 
-    def _scrap_company_page(self, company: dict[str, str]) -> dict[str, str]:
+    def _scrap_company_page(
+        self,
+        company: dict[str, str],
+    ) -> dict[str, Union[str, int]]:
         url = f'https://nofluffjobs.com/pl{company["url"]}'
         company_resp = requests.get(url)
         company_data = BeautifulSoup(company_resp.content, 'html.parser')
@@ -205,7 +208,7 @@ class NoFluffDownloader(BaseDownloader):
             company=company,
             seniority=job['seniority'][0].lower(),
             title=job['title'],
-            url=job['url'],
+            url=f'https://nofluffjobs.com/pl/job/{job["url"]}',
         )
         self._add_locations(job_instance, job['location'])
 

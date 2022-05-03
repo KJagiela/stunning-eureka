@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.db.models import QuerySet
 from django.http import HttpRequest
+from django.utils.html import format_html
 
 from .filters import (
     CompanySizeFilter,
@@ -27,26 +28,27 @@ class JobAdmin(admin.ModelAdmin):
         'company_size',
         'board',
         'category',
-        'salary_from',
-        'salary_to',
+        'salary',
+        'original_url',
     )
     list_filter = (CompanySizeFilter, SeniorityFilter, TechnologyFilter, SalaryFilter)
+    actions = ('fix_nofluff_links',)
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         return qs.prefetch_related('salary', 'category', 'board', 'company')
 
-    @admin.display(description='Salary min')
-    def salary_from(self, obj):
-        return obj.salary.amount_from
-
-    @admin.display(description='Salary max')
-    def salary_to(self, obj):
-        return obj.salary.amount_to
+    @admin.display(description='Salary')
+    def salary(self, obj):
+        return f'{obj.salary.amount_from} - {obj.salary.amount_to}'
 
     @admin.display(description='Company size')
     def company_size(self, obj):
         return f'{obj.company.size_from} - {obj.company.size_to}'
+
+    @admin.display(description='Original URL')
+    def original_url(self, obj):
+        return format_html('<a href="{0}" target="_blank">{1}</a>', obj.url, obj.url)
 
 
 @admin.register(JobSalary)
