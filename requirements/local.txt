@@ -24,7 +24,7 @@ requests-mock==1.9.3  # https://github.com/jamielennox/requests-mock
 
 # Documentation
 # ------------------------------------------------------------------------------
-sphinx==4.4.0  # https://github.com/sphinx-doc/sphinx
+sphinx==5.2.2  # https://github.com/sphinx-doc/sphinx
 sphinx-autobuild==2021.3.14 # https://github.com/GaretJax/sphinx-autobuild
 
 # Code quality
