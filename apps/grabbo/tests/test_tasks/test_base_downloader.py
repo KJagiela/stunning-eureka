@@ -3,6 +3,14 @@ from apps.grabbo import tasks
 import pytest
 
 
+class MockDownloader(tasks.BaseDownloader):
+    def download_companies(self) -> None:
+        """No need to do anything here."""
+
+    def download_jobs(self) -> None:
+        """No need to do anything here."""
+
+
 @pytest.mark.parametrize(
     'size_str, expected_size_from, expected_size_to',
     [
@@ -18,7 +26,7 @@ import pytest
     ],
 )
 def test_parse_company_size(db, size_str, expected_size_from, expected_size_to):
-    assert tasks.BaseDownloader()._parse_company_size(size_str) == {
+    assert MockDownloader()._parse_company_size(size_str) == {
         'size_from': expected_size_from,
         'size_to': expected_size_to,
     }
@@ -26,4 +34,4 @@ def test_parse_company_size(db, size_str, expected_size_from, expected_size_to):
 
 def test_parse_company_size_invalid(db):
     with pytest.raises(ValueError):
-        tasks.BaseDownloader()._parse_company_size('1234-')
+        MockDownloader()._parse_company_size('1234-')

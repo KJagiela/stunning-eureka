@@ -1,6 +1,9 @@
 import logging
 
-from abc import ABC
+from abc import (
+    ABC,
+    abstractmethod,
+)
 from functools import cached_property
 from typing import Union
 
@@ -35,10 +38,12 @@ class BaseDownloader(ABC):
         self.download_companies()
         self.download_jobs()
 
+    @abstractmethod
     def download_companies(self) -> None:
         # TODO: private method
         raise NotImplementedError('You must implement this method')
 
+    @abstractmethod
     def download_jobs(self) -> None:
         raise NotImplementedError('You must implement this method')
 
