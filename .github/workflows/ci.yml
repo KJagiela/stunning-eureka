@@ -46,17 +46,8 @@ jobs:
       - name: Build the Stack
         run:  docker-compose build
 
-      - name: Run DB Migrations
-        run:  docker-compose run --rm app python manage.py migrate
-
       - name: Run Linters
-        run:  docker-compose run app flake8 .
-
-      - name: Run Mypy
-        run:  docker-compose run app mypy .
-
-      - name: Run Django Tests
-        run:  docker-compose run app pytest
+        run:  docker-compose run app make test
 
       - name: Tear down the Stack
         run:  docker-compose down

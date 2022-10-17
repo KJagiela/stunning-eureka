@@ -81,9 +81,12 @@ class BaseDownloader(ABC):
             }
         if '-' in size:
             split_size = size.split('-')
+            size_from = int(split_size[0].strip() or 0)
+            size_to = int(split_size[1].strip() or size_from * 1.1)
+
             return {
-                'size_from': int(split_size[0].strip()),
-                'size_to': int(split_size[1].strip()),
+                'size_from': size_from,
+                'size_to': size_to,
             }
         if '+' in size:
             size_from = int(size.strip('+').strip())
@@ -153,7 +156,13 @@ class NoFluffDownloader(BaseDownloader):
     def download_jobs(self) -> None:
         response = requests.post(
             self.jobs_url,
-            json={'criteriaSearch': {}, 'page': 1},
+            json={
+                'criteriaSearch': {
+                    'requirement': ['Python'],
+                    'city': ['remote', 'warszawa'],
+                },
+                'page': 1,
+            },
         )
         try:
             response.raise_for_status()
@@ -261,6 +270,8 @@ class JustJoinItDownloader(BaseDownloader):
             return
         jobs = response.json()
         for job in tqdm(jobs):
+            if job['marker_icon'] != 'python':
+                continue
             if Job.objects.filter(original_id=job['id']).exists():
                 continue
             self._add_job(job)

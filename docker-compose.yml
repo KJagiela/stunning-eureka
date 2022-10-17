@@ -21,7 +21,7 @@ services:
       - ./.envs/.local/.django
       - ./.envs/.local/.postgres
     ports:
-      - "8000:8000"
+      - "8008:8000"
 
   db:
     image: postgres:14.1-bullseye
