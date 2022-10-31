@@ -6,7 +6,6 @@ volumes:
 
 services:
   app: &app
-    user: "1000"
     build:
       context: .
       dockerfile: ./compose/local/django/Dockerfile
@@ -14,7 +13,7 @@ services:
     container_name: jobbo_local_django
     depends_on:
       - db
-      - redis
+      # - redis
     volumes:
       - .:/app:z
     env_file:
@@ -32,34 +31,34 @@ services:
     env_file:
       - ./.envs/.local/.postgres
 
-  redis:
-    image: redis:6
-    container_name: jobbo_local_redis
+  # redis:
+  #   image: redis:6
+  #   container_name: jobbo_local_redis
 
-  celeryworker:
-    <<: *app
-    image: jobbo_local_celeryworker
-    container_name: jobbo_local_celeryworker
-    depends_on:
-      - redis
-      - db
-    ports: []
-    command: /start-celeryworker
+  # celeryworker:
+  #   <<: *app
+  #   image: jobbo_local_celeryworker
+  #   container_name: jobbo_local_celeryworker
+  #   depends_on:
+  #     - redis
+  #     - db
+  #   ports: []
+  #   command: /start-celeryworker
 
-  celerybeat:
-    <<: *app
-    image: jobbo_local_celerybeat
-    container_name: jobbo_local_celerybeat
-    depends_on:
-      - redis
-      - db
-    ports: []
-    command: /start-celerybeat
+  # celerybeat:
+  #   <<: *app
+  #   image: jobbo_local_celerybeat
+  #   container_name: jobbo_local_celerybeat
+  #   depends_on:
+  #     - redis
+  #     - db
+  #   ports: []
+  #   command: /start-celerybeat
 
-  flower:
-    <<: *app
-    image: jobbo_local_flower
-    container_name: jobbo_local_flower
-    ports:
-      - "5555:5555"
-    command: /start-flower
+  # flower:
+  #   <<: *app
+  #   image: jobbo_local_flower
+  #   container_name: jobbo_local_flower
+  #   ports:
+  #     - "5555:5555"
+  #   command: /start-flower

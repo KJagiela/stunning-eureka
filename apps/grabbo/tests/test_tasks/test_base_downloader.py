@@ -34,4 +34,4 @@ def test_parse_company_size(db, size_str, expected_size_from, expected_size_to):
 
 def test_parse_company_size_invalid(db):
     with pytest.raises(ValueError):
-        MockDownloader()._parse_company_size('1234-')
+        MockDownloader()._parse_company_size('1234 world-wide')

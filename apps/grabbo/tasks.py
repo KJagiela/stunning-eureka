@@ -34,6 +34,10 @@ class BaseDownloader(ABC):
     companies_url: str = ''
     jobs_url: str = ''
 
+    def __init__(self, technology: str = '') -> None:
+        super().__init__()
+        self.technology = technology or 'Python'
+
     def download(self) -> None:
         self.download_companies()
         self.download_jobs()
@@ -82,7 +86,7 @@ class BaseDownloader(ABC):
         if '-' in size:
             split_size = size.split('-')
             size_from = int(split_size[0].strip() or 0)
-            size_to = int(split_size[1].strip() or size_from * 1.1)
+            size_to = int(split_size[1].strip() or size_from * 1.1)  # noqa: WPS432
 
             return {
                 'size_from': size_from,
@@ -139,17 +143,9 @@ class NoFluffDownloader(BaseDownloader):
 
         resp_data = response.json()
         for company in tqdm(resp_data['items']):
-            possible_companies = Company.objects.get_possible_match(
-                name=company['name'],
-            )
-            # if 0 or more than 1 possible matches, we create a new company
-            # if there's more than 1, we can't be sure that this is the same one,
-            # so we create a new company
-            if possible_companies.count() == 1:
-                continue
             additional_company_data = self._scrap_company_page(company)
-            Company.objects.create(
-                name=company['name'].replace('sp. z o.o.', '').strip(),
+            Company.objects.create_or_update_if_better(
+                name=company['name'],
                 **additional_company_data,
             )
 
@@ -158,7 +154,7 @@ class NoFluffDownloader(BaseDownloader):
             self.jobs_url,
             json={
                 'criteriaSearch': {
-                    'requirement': ['Python'],
+                    'requirement': [self.technology],
                     'city': ['remote', 'warszawa'],
                 },
                 'page': 1,
@@ -184,16 +180,29 @@ class NoFluffDownloader(BaseDownloader):
         except IndexError:
             return ''
 
-    def _scrap_company_page(self, company: dict[str, str]) -> dict[str, str]:
+    @staticmethod
+    def _get_company_resp(url):
+        while True:
+            company_resp = requests.get(url)
+            try:
+                company_resp.raise_for_status()
+            except requests.HTTPError:
+                continue
+            return BeautifulSoup(company_resp.content, 'html.parser')
+
+    def _scrap_company_page(self, company: dict[str, str]) -> dict[str, str | int]:
         url = f'https://nofluffjobs.com/pl{company["url"]}'
-        company_resp = requests.get(url)
-        company_data = BeautifulSoup(company_resp.content, 'html.parser')
+        company_data = self._get_company_resp(url)
         spans = company_data.find(id='company-main').find_all('span')
         size = self._get_info_from_spans(spans, 'Wielkość firmy')
+        try:
+            parsed_size = self._parse_company_size(size)
+        except ValueError:
+            parsed_size = {'size_from': 0, 'size_to': 0}
         return {
             'url': url,
             'industry': self._get_info_from_spans(spans, 'Branża'),
-            **self._parse_company_size(size),
+            **parsed_size,
         }
 
     def _add_job(self, job: NestedResponseDict) -> None:
@@ -270,11 +279,21 @@ class JustJoinItDownloader(BaseDownloader):
             return
         jobs = response.json()
         for job in tqdm(jobs):
-            if job['marker_icon'] != 'python':
+            if not self._should_job_be_added(job):
                 continue
             if Job.objects.filter(original_id=job['id']).exists():
                 continue
             self._add_job(job)
+
+    def _should_job_be_added(self, job: ResponseWithList) -> bool:
+        if job['marker_icon'] != self.technology.lower():
+            # only selected technology
+            return False
+        if job['workplace_type'] == 'remote':
+            # always add remote jobs
+            return True
+        city = job['city'].lower()
+        return 'warsaw' in city or 'warszawa' in city
 
     def _add_job(self, job: ResponseWithList) -> None:
         if all(job_type['salary'] is None for job_type in job['employment_types']):
@@ -286,7 +305,7 @@ class JustJoinItDownloader(BaseDownloader):
         technology, _ = Technology.objects.get_or_create(
             name=job['marker_icon'],
         )
-        job_instance = Job.objects.create(
+        job_instance = Job.objects.create_if_not_duplicate(
             original_id=job['id'],
             board=self.job_board,
             category=category,
@@ -300,18 +319,8 @@ class JustJoinItDownloader(BaseDownloader):
         self._add_locations(job_instance, job)
 
     def _add_or_update_company(self, job: ResponseWithList) -> Company:
-        possible_companies = Company.objects.get_possible_match(job['company_name'])
         size = self._parse_company_size(job['company_size'])
-        if possible_companies.count() == 1:
-            # if we have only one possible match, let's update if
-            return possible_companies.first().update_if_better(
-                url=job['company_url'],
-                **size,
-            )
-        # if 0 or more than 1 possible matches, we create a new company
-        # if there's more than 1, we can't be sure that this is the same one,
-        # so we create a new company
-        return Company.objects.create(
+        return Company.objects.create_or_update_if_better(
             name=job['company_name'],
             url=job['company_url'],
             **size,
