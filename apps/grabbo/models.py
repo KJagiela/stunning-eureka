@@ -96,6 +96,7 @@ class Job(models.Model):
     company = models.ForeignKey('grabbo.Company', on_delete=models.SET_NULL, null=True)
     title = models.CharField(max_length=256)
     url = models.CharField(max_length=256)
+    description = models.TextField(blank=True)
 
     def __str__(self) -> str:
         return f'{self.title} in {self.company}'

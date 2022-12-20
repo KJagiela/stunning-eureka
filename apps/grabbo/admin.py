@@ -18,6 +18,7 @@ from .models import (
     JobSalary,
     Technology,
 )
+from .tasks import download_jobs
 
 
 @admin.register(Job)
@@ -73,7 +74,12 @@ class JobCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(JobBoard)
 class JobBoardAdmin(admin.ModelAdmin):
-    """Register JobBoard model in admin panel."""
+    actions = ('download_jobs',)
+
+    @admin.action(description='Download jobs')
+    def download_jobs(self, request: HttpRequest, queryset: QuerySet[JobBoard]) -> None:
+        for board in queryset:
+            download_jobs.delay(board.name)
 
 
 @admin.register(Company)

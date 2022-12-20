@@ -7,6 +7,7 @@ from typing import Union
 import requests
 
 from bs4 import BeautifulSoup
+from celery import shared_task
 from tqdm import tqdm
 
 from .models import (
@@ -100,11 +101,17 @@ class BaseDownloader(ABC):
         if '(' in size:
             real_size = size.split('(')[0]
             return self._parse_company_size(real_size)
-        logger.error(f'Unknown size: {size}')
-        return {
-            'size_from': 0,
-            'size_to': 0,
-        }
+        raise ValueError(f'Unknown size: {size}')
+
+    def _get_company_size(self, size: str) -> dict[str, int]:
+        try:
+            return self._parse_company_size(size)
+        except ValueError:
+            logger.error('Unknown size: %s', size)
+            return {
+                'size_from': 0,
+                'size_to': 0,
+            }
 
 
 class NoFluffDownloader(BaseDownloader):
@@ -116,6 +123,7 @@ class NoFluffDownloader(BaseDownloader):
         'https://nofluffjobs.com/api/search/posting?'
         + 'limit=40000&offset=0&salaryCurrency=PLN&salaryPeriod=month&region=pl'
     )
+    single_job_url = 'https://nofluffjobs.com/api/posting/{}'
 
     @cached_property
     def job_board(self) -> JobBoard:
@@ -175,8 +183,7 @@ class NoFluffDownloader(BaseDownloader):
         company: dict[str, str],
     ) -> dict[str, Union[str, int]]:
         url = f'https://nofluffjobs.com/pl{company["url"]}'
-        company_resp = requests.get(url)
-        company_data = BeautifulSoup(company_resp.content, 'html.parser')
+        company_data = BeautifulSoup(requests.get(url).content, 'html.parser')
         spans = company_data.find(id='company-main').find_all('span')
         size = self._get_info_from_spans(spans, 'Wielkość firmy')
         return {
@@ -186,8 +193,9 @@ class NoFluffDownloader(BaseDownloader):
         }
 
     def _add_job(self, job: NestedResponseDict) -> None:
+        description, salary = self._get_job_data_from_details_api(job)
+
         category, _ = JobCategory.objects.get_or_create(name=job['category'])
-        salary = self._add_salary(job['salary'])
         try:
             company, _ = Company.objects.get_or_create(
                 name=job['name'],
@@ -209,8 +217,23 @@ class NoFluffDownloader(BaseDownloader):
             seniority=job['seniority'][0].lower(),
             title=job['title'],
             url=f'https://nofluffjobs.com/pl/job/{job["url"]}',
+            description=description,
         )
         self._add_locations(job_instance, job['location'])
+
+    def _get_job_data_from_details_api(self, job):
+        original_id = job['id']
+        job_url = self.single_job_url.format(original_id)
+        response = requests.get(job_url)
+        try:
+            response.raise_for_status()
+        except requests.HTTPError:
+            logger.error(f'Whoops, couldnt get job {original_id} from NoFluff.')
+            return ''
+        job_data = response.json()
+        description = job_data['specs'].get('dailyTasks', '')
+        salary = self._add_salary(job_data['essentials'].get('originalSalary', ''))
+        return description, salary
 
     @staticmethod
     def _add_locations(job_instance: Job, location_entries: ResponseWithList) -> None:
@@ -331,3 +354,13 @@ class JustJoinItDownloader(BaseDownloader):
             city=job_raw_data['city'][:field_size],
             street=job_raw_data['street'][:field_size],
         )
+
+
+@shared_task()
+def download_jobs(board_name: str) -> None:
+    downloaders_mapping = {
+        'nofluff': NoFluffDownloader,
+        'justjoin.it': JustJoinItDownloader,
+    }
+    downloader_class = downloaders_mapping.get(board_name)
+    downloader_class().download()

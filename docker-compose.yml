@@ -44,7 +44,7 @@ services:
       - redis
       - db
     ports: []
-    command: /start-celeryworker
+    command: /start_worker.sh
 
   celerybeat:
     <<: *app
@@ -54,7 +54,7 @@ services:
       - redis
       - db
     ports: []
-    command: /start-celerybeat
+    command: /start_beat.sh
 
   flower:
     <<: *app
@@ -62,4 +62,4 @@ services:
     container_name: jobbo_local_flower
     ports:
       - "5555:5555"
-    command: /start-flower
+    command: /start_flower.sh
