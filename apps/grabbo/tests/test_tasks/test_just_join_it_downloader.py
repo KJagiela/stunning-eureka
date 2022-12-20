@@ -68,6 +68,10 @@ class TestJustJoinItJobsDownloader:
             tasks.JustJoinItDownloader.jobs_url,
             json=[{'id': 1, 'title': 'Job 1'}],
         )
+        mocker.patch(
+            'apps.grabbo.tasks.JustJoinItDownloader._should_job_be_added',
+            return_value=True,
+        )
         patched_add_job = mocker.patch(
             'apps.grabbo.tasks.JustJoinItDownloader._add_job',
         )
@@ -83,6 +87,10 @@ class TestJustJoinItJobsDownloader:
         requests_mock.get(
             tasks.JustJoinItDownloader.jobs_url,
             json=[{'id': job.original_id, 'title': 'Job 1'}],
+        )
+        mocker.patch(
+            'apps.grabbo.tasks.JustJoinItDownloader._should_job_be_added',
+            return_value=True,
         )
         patched_add_job = mocker.patch(
             'apps.grabbo.tasks.JustJoinItDownloader._add_job',

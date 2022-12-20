@@ -1,6 +1,9 @@
 from django.db import models
 
-from apps.grabbo.managers import CompanyManager
+from .managers import (
+    CompanyManager,
+    JobManager,
+)
 
 
 class JobBoard(models.Model):
@@ -97,6 +100,8 @@ class Job(models.Model):
     title = models.CharField(max_length=256)
     url = models.CharField(max_length=256)
     description = models.TextField(blank=True)
+
+    objects = JobManager()
 
     def __str__(self) -> str:
         return f'{self.title} in {self.company}'

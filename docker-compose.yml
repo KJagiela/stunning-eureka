@@ -6,7 +6,6 @@ volumes:
 
 services:
   app: &app
-    user: "1000"
     build:
       context: .
       dockerfile: ./compose/local/django/Dockerfile
@@ -14,14 +13,14 @@ services:
     container_name: jobbo_local_django
     depends_on:
       - db
-      - redis
+      # - redis
     volumes:
       - .:/app:z
     env_file:
       - ./.envs/.local/.django
       - ./.envs/.local/.postgres
     ports:
-      - "8000:8000"
+      - "8008:8000"
 
   db:
     image: postgres:14.1-bullseye
@@ -33,8 +32,8 @@ services:
       - ./.envs/.local/.postgres
 
   redis:
-    image: redis:6
-    container_name: jobbo_local_redis
+   image: redis:6
+   container_name: jobbo_local_redis
 
   celeryworker:
     <<: *app
