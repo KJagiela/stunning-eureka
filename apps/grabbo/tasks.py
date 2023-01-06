@@ -4,6 +4,7 @@ from abc import (
     ABC,
     abstractmethod,
 )
+from contextlib import suppress
 from functools import cached_property
 from typing import Union
 
@@ -64,16 +65,12 @@ class BaseDownloader(ABC):
         and variables as it likes.
         """
         # TODO: class method?
-        # TODO: bump to 10 and pattern match? :>
+        # TODO: pattern match? :>
         chars_to_remove = {',', ' ', '.', "'"}
         for char in chars_to_remove:
             size = size.replace(char, '')
-        try:
+        with suppress(ValueError):
             size_exact = int(size)
-        except ValueError:
-            # If not a number, we assume it's a range.
-            pass  # noqa: WPS420 - no consequences if it's not a number
-        else:
             return {
                 'size_from': size_exact,
                 'size_to': size_exact,
@@ -135,7 +132,6 @@ class NoFluffDownloader(BaseDownloader):
         'https://nofluffjobs.com/api/search/posting?'
         + 'limit=40000&offset=0&salaryCurrency=PLN&salaryPeriod=month&region=pl'
     )
-    single_job_url = 'https://nofluffjobs.com/api/posting/{}'
 
     @cached_property
     def job_board(self) -> JobBoard:
@@ -242,15 +238,19 @@ class NoFluffDownloader(BaseDownloader):
         )
         self._add_locations(job_instance, job['location'])
 
-    def _get_job_data_from_details_api(self, job):
+    def _get_job_data_from_details_api(
+        self,
+        job: ResponseWithList,
+    ) -> tuple[str, JobSalary] | None:
         original_id = job['id']
-        job_url = self.single_job_url.format(original_id)
+        job_url = f'https://nofluffjobs.com/api/posting/{original_id}'
         response = requests.get(job_url)
         try:
             response.raise_for_status()
         except requests.HTTPError:
             logger.error(f'Whoops, couldnt get job {original_id} from NoFluff.')
-            return ''
+            salary = self._add_salary(job['salary'])
+            return '', salary
         job_data = response.json()
         description = job_data['specs'].get('dailyTasks', '')
         salary = self._add_salary(job_data['essentials'].get('originalSalary', ''))

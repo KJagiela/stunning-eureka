@@ -20,7 +20,7 @@ def no_fluff(job_board_factory):
 class TestNoFluffCompaniesDownloader:
 
     @pytest.fixture()
-    def companies_response(self, requests_mock, mocker):
+    def companies_response(self, requests_mock, mocker, job_salary):
         requests_mock.get(
             tasks.NoFluffDownloader.companies_url,
             json={'items': [
@@ -35,6 +35,13 @@ class TestNoFluffCompaniesDownloader:
                 'size_to': 1235,
                 'industry': 'IT',
             },
+        )
+        mocker.patch(
+            'apps.grabbo.tasks.NoFluffDownloader._get_job_data_from_details_api',
+            return_value=[
+                'some_description',
+                job_salary,
+            ],
         )
 
     def test_job_board_property_returns_nofluff(self, no_fluff):

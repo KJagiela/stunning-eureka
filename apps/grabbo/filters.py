@@ -1,8 +1,6 @@
 from django.contrib import admin
 from django.db import models
 
-from apps.grabbo.models import Job
-
 
 class InputFilter(admin.SimpleListFilter):
     """
@@ -74,20 +72,6 @@ class TechnologyFilter(admin.SimpleListFilter):
                 models.Q(technology__name__icontains='python')
                 | models.Q(technology__name__icontains='django'),
             )
-        return queryset
-
-
-class SeniorityFilter(admin.SimpleListFilter):
-    title = 'seniority'
-    parameter_name = 'seniority'
-
-    def lookups(self, request, model_admin):
-        seniorities = set(Job.objects.all().values_list('seniority', flat=True))
-        return [(seniority, seniority) for seniority in seniorities]
-
-    def queryset(self, request, queryset):
-        if self.value():
-            return queryset.filter(seniority=self.value())
         return queryset
 
 

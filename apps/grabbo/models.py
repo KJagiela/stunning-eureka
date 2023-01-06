@@ -19,6 +19,7 @@ class Company(models.Model):
     size_from = models.IntegerField()
     size_to = models.IntegerField()
     url = models.CharField(max_length=1024, blank=True)
+    is_blacklisted = models.BooleanField(default=False)
 
     objects = CompanyManager()
 
@@ -93,7 +94,6 @@ class Job(models.Model):
     )
     # TODO: maybe the relation should be the other way round?
     salary = models.ForeignKey('grabbo.JobSalary', on_delete=models.PROTECT)
-    # TODO: model?
     seniority = models.CharField(max_length=256)
     original_id = models.CharField(max_length=256)
     company = models.ForeignKey('grabbo.Company', on_delete=models.SET_NULL, null=True)

@@ -6,7 +6,6 @@ from django.utils.html import format_html
 from .filters import (
     CompanySizeFilter,
     SalaryFilter,
-    SeniorityFilter,
     TechnologyFilter,
 )
 from .models import (
@@ -30,10 +29,16 @@ class JobAdmin(admin.ModelAdmin):
         'board',
         'category',
         'salary',
-        'original_url',
+        'url_display',
     )
-    list_filter = (CompanySizeFilter, SeniorityFilter, TechnologyFilter, SalaryFilter)
     actions = ('fix_nofluff_links',)
+    list_filter = (
+        CompanySizeFilter,
+        'seniority',
+        TechnologyFilter,
+        SalaryFilter,
+        'company__is_blacklisted',
+    )
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -47,9 +52,15 @@ class JobAdmin(admin.ModelAdmin):
     def company_size(self, obj):
         return f'{obj.company.size_from} - {obj.company.size_to}'
 
-    @admin.display(description='Original URL')
-    def original_url(self, obj):
-        return format_html('<a href="{0}" target="_blank">{1}</a>', obj.url, obj.url)
+    @admin.display(description='link')
+    def url_display(self, obj: Job):
+        return format_html(f'<a href="{obj.url}">Link</a>')
+
+    @admin.action(description='Blacklist selected companies')
+    def blacklist_company(self, request: HttpRequest, queryset: QuerySet[Job]) -> None:
+        for job in queryset:
+            job.company.is_blacklisted = True
+            job.company.save()
 
 
 @admin.register(JobSalary)
