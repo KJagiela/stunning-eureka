@@ -76,6 +76,13 @@ class JobSalary(models.Model):
         return f'{self.amount_from} - {self.amount_to} {self.currency}'
 
 
+class JobStatusChoices(models.Choices):
+    UNKNOWN = 0  # special case
+    INTERESTED = 1
+    BLACKLISTED = 2
+    HYPED = 3
+
+
 class Job(models.Model):
     board = models.ForeignKey(
         'grabbo.JobBoard',
@@ -100,6 +107,7 @@ class Job(models.Model):
     title = models.CharField(max_length=256)
     url = models.CharField(max_length=256)
     description = models.TextField(blank=True)
+    status = models.IntegerField(choices=JobStatusChoices.UNKNOWN)
 
     objects = JobManager()
 

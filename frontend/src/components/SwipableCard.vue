@@ -3,54 +3,77 @@
       class="draggable-container" @drop="abortMe"
       @dragover.prevent
       @dragenter.prevent
+      @keyup.right="markInterested"
+      @keyup.left="markBlacklisted"
     >
       <div
         class="draggable-card"
         draggable="true"
         @dragstart="dragMe"
       >
-        <div class="job-description">{{ this.current }}</div>
-      </div>
-      <div
-        class="dummy-card"
-      >
-        <div class="job-description">{{ this.next }}</div>
+        <div class="job-description">
+          <h2 class="job-name">{{ this.current.title }}</h2>
+          <h3 class="company-name">{{ this.current.company_name }} (Size: {{ this.current.company_size }})</h3>
+          <div class="salary">Salary: {{ this.current.salary}}</div>
+          <div class="job-category"> Cat: {{ this.current.category }}, tech: {{ this.current.technology }}</div>
+          <div>{{ this.current.description}}</div>
+          <a :href="this.current.url" target="_blank">See it</a>
+        </div>
       </div>
     </div>
 </template>
 <script>
+import axios from 'axios'
 export default {
   name: "SwipableCard",
   data() {
     return {
       startX: null,
-      jobs: ['job1', 'job2', 'job3'],
+      jobs: null,
       currentJobId: 0,
     }
   },
   computed: {
     current() {
-      return this.jobs[this.currentJobId];
+      if (!!this.jobs){
+        return this.jobs[this.currentJobId];
+      }
     },
-    next() {
-      return this.jobs[this.currentJobId + 1];
-    }
+  },
+  created() {
+    axios
+        .get('http://localhost:8008/api/grabbo/jobs/')
+        .then((response) => {
+          this.jobs = response.data.results;
+        })
+  },
+  mounted() {
+    document.addEventListener('keyup', this.handleKey)
   },
   methods: {
+    handleKey (e) {
+      if (e.key === 'ArrowRight') this.markInterested()
+      if (e.key === 'ArrowLeft') this.markBlacklisted()
+    },
     dragMe(evt, item) {
-      // evt.dataTransfer.dropEffect = 'move'
-      // evt.dataTransfer.effectAllowed = 'move'
-      // evt.dataTransfer.setData('itemID', item.id)
+      evt.dataTransfer.dropEffect = 'move'
+      evt.dataTransfer.effectAllowed = 'move'
       this.startX = evt.clientX
+
     },
     abortMe(evt) {
-      console.log(this.startX)
       if(evt.clientX > this.startX + 50) {
-        console.log('Fajne')
+        this.markInterested()
       }
       if(evt.clientX < this.startX - 50) {
-        console.log('Niefajne')
+        this.markBlacklisted()
       }
+    },
+    markInterested() {
+      console.log('Fajne')
+    },
+    markBlacklisted() {
+      console.log('niefajne')
     }
   }
 }
@@ -76,17 +99,11 @@ export default {
   z-index: 2;
 }
 .job-description {
-  position: relative;
-  top: 50%;
   font-size: 1.5em;
   color: #993333;
 }
-.dummy-card {
-  position: absolute;
-  z-index: 1;
-  background-color: #2b669a;
-  border-radius: 10px;
-  height: 500px;
-  width: 400px;
+
+a {
+  color: #4b1818;
 }
 </style>
