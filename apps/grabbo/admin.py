@@ -37,7 +37,7 @@ class JobAdmin(admin.ModelAdmin):
         'seniority',
         TechnologyFilter,
         SalaryFilter,
-        'company__is_blacklisted',
+        'company__status',
     )
 
     def get_queryset(self, request):

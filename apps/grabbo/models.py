@@ -6,6 +6,13 @@ from .managers import (
 )
 
 
+class HypeStatus(models.IntegerChoices):
+    UNKNOWN = 0  # special case
+    FUCK_IT = 1
+    INTERESTED = 2
+    HYPED = 3
+
+
 class JobBoard(models.Model):
     name = models.CharField(max_length=32)
 
@@ -19,7 +26,7 @@ class Company(models.Model):
     size_from = models.IntegerField()
     size_to = models.IntegerField()
     url = models.CharField(max_length=1024, blank=True)
-    is_blacklisted = models.BooleanField(default=False)
+    status = models.IntegerField(choices=HypeStatus.choices, default=HypeStatus.UNKNOWN)
 
     objects = CompanyManager()
 
@@ -76,13 +83,6 @@ class JobSalary(models.Model):
         return f'{self.amount_from} - {self.amount_to} {self.currency}'
 
 
-class JobStatusChoices(models.Choices):
-    UNKNOWN = 0  # special case
-    INTERESTED = 1
-    BLACKLISTED = 2
-    HYPED = 3
-
-
 class Job(models.Model):
     board = models.ForeignKey(
         'grabbo.JobBoard',
@@ -107,7 +107,7 @@ class Job(models.Model):
     title = models.CharField(max_length=256)
     url = models.CharField(max_length=256)
     description = models.TextField(blank=True)
-    status = models.IntegerField(choices=JobStatusChoices.UNKNOWN)
+    status = models.IntegerField(choices=HypeStatus.choices, default=HypeStatus.UNKNOWN)
 
     objects = JobManager()
 

@@ -70,10 +70,16 @@ export default {
       }
     },
     markInterested() {
-      console.log('Fajne')
+      axios.post(
+          `http://localhost:8008/api/grabbo/jobs/${this.current.id}/`,
+          {hype: 2},
+      )
     },
     markBlacklisted() {
-      console.log('niefajne')
+      axios.post(
+          `http://localhost:8008/api/grabbo/jobs/${this.current.id}/`,
+          {hype: 1},
+      )
     }
   }
 }
