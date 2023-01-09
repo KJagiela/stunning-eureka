@@ -30,4 +30,4 @@ class JobSerializer(serializers.ModelSerializer):
         return f'{company.size_from}-{company.size_to}'
 
     def get_salary(self, job):
-        return f'{job.salary.amount_from}-{job.salary.amount_to}'
+        return f'{job.salary.amount_from}-{job.salary.amount_to} {job.salary.currency}'
