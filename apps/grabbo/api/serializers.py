@@ -9,11 +9,13 @@ class JobSerializer(serializers.ModelSerializer):
     category = serializers.CharField(source='category.name')
     technology = serializers.CharField(source='technology.name')
     company_size = serializers.SerializerMethodField()
+    company_id = serializers.IntegerField(source='company.id')
 
     class Meta:
         model = Job
         fields = (
             'id',
+            'company_id',
             'category',
             'technology',
             'salary',

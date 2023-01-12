@@ -97,6 +97,7 @@ class JobBoardAdmin(admin.ModelAdmin):
 class CompanyAdmin(admin.ModelAdmin):
     list_display = ('name', 'industry', 'size_from', 'size_to', 'url')
     actions = ('deduplicate',)
+    search_fields = ('name',)
 
     @admin.action(description='Deduplicate companies')
     def deduplicate(self, request: HttpRequest, queryset: QuerySet[Company]) -> None:
@@ -104,12 +105,12 @@ class CompanyAdmin(admin.ModelAdmin):
             duplicated_companies = (
                 Company.objects.get_possible_match(company.name).exclude(pk=company.pk)
             )
-            if duplicated_companies.exists():
-                duplicated_company = duplicated_companies.first()
+            for duplicate in duplicated_companies:
+                duplicate.job_set.update(company=company)
                 company.update_if_better(
-                    industry=duplicated_company.industry,
-                    size_from=duplicated_company.size_from,
-                    size_to=duplicated_company.size_to,
-                    url=duplicated_company.url,
+                    industry=duplicate.industry,
+                    size_from=duplicate.size_from,
+                    size_to=duplicate.size_to,
+                    url=duplicate.url,
                 )
-                duplicated_company.delete()
+                duplicate.delete()
