@@ -147,6 +147,8 @@ class NoFluffDownloader(BaseDownloader):
 
         resp_data = response.json()
         for company in tqdm(resp_data['items']):
+            if Company.objects.filter(name=company['name'], size_to__gt=0).exists():
+                continue
             additional_company_data = self._scrap_company_page(company)
             Company.objects.create_or_update_if_better(
                 name=company['name'],
@@ -210,7 +212,8 @@ class NoFluffDownloader(BaseDownloader):
         }
 
     def _add_job(self, job: NestedResponseDict) -> None:
-        description, salary = self._get_job_data_from_details_api(job)
+        description = self._get_job_data_from_details_api(job)
+        salary = self._add_salary(job['salary'])
 
         category, _ = JobCategory.objects.get_or_create(name=job['category'])
         try:
@@ -241,7 +244,7 @@ class NoFluffDownloader(BaseDownloader):
     def _get_job_data_from_details_api(
         self,
         job: ResponseWithList,
-    ) -> tuple[str, JobSalary] | None:
+    ) -> str:
         original_id = job['id']
         job_url = f'https://nofluffjobs.com/api/posting/{original_id}'
         response = requests.get(job_url)
@@ -249,12 +252,9 @@ class NoFluffDownloader(BaseDownloader):
             response.raise_for_status()
         except requests.HTTPError:
             logger.error(f'Whoops, couldnt get job {original_id} from NoFluff.')
-            salary = self._add_salary(job['salary'])
-            return '', salary
+            return ''
         job_data = response.json()
-        description = job_data['specs'].get('dailyTasks', '')
-        salary = self._add_salary(job_data['essentials'].get('originalSalary', ''))
-        return description, salary
+        return job_data['specs'].get('dailyTasks', '')
 
     @staticmethod
     def _add_locations(job_instance: Job, location_entries: ResponseWithList) -> None:
@@ -271,12 +271,15 @@ class NoFluffDownloader(BaseDownloader):
 
     @staticmethod
     def _add_salary(salary_data: dict[str, str]) -> JobSalary:
-        return JobSalary.objects.create(
-            amount_from=salary_data['from'],
-            amount_to=salary_data['to'],
-            job_type=salary_data['type'],
-            currency=salary_data['currency'],
-        )
+        try:
+            return JobSalary.objects.create(
+                amount_from=salary_data['from'],
+                amount_to=salary_data['to'],
+                job_type=salary_data['type'],
+                currency=salary_data['currency'],
+            )
+        except KeyError:
+            print(salary_data)
 
 
 class JustJoinItDownloader(BaseDownloader):
