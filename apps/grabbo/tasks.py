@@ -138,7 +138,7 @@ class NoFluffDownloader(BaseDownloader):
         return JobBoard.objects.get(name='nofluff')
 
     def download_companies(self) -> None:
-        response = requests.get(self.companies_url)
+        response = requests.get(self.companies_url, timeout=5)
         try:
             response.raise_for_status()
         except requests.HTTPError:
@@ -165,6 +165,7 @@ class NoFluffDownloader(BaseDownloader):
                 },
                 'page': 1,
             },
+            timeout=10,
         )
         try:
             response.raise_for_status()
@@ -189,7 +190,7 @@ class NoFluffDownloader(BaseDownloader):
     @staticmethod
     def _get_company_resp(url):
         while True:
-            company_resp = requests.get(url)
+            company_resp = requests.get(url, timeout=5)
             try:
                 company_resp.raise_for_status()
             except requests.HTTPError:
@@ -247,7 +248,7 @@ class NoFluffDownloader(BaseDownloader):
     ) -> str:
         original_id = job['id']
         job_url = f'https://nofluffjobs.com/api/posting/{original_id}'
-        response = requests.get(job_url)
+        response = requests.get(job_url, timeout=5)
         try:
             response.raise_for_status()
         except requests.HTTPError:
@@ -279,7 +280,7 @@ class NoFluffDownloader(BaseDownloader):
                 currency=salary_data['currency'],
             )
         except KeyError:
-            print(salary_data)
+            logger.error('Incorrect salary data %s', salary_data)
 
 
 class JustJoinItDownloader(BaseDownloader):
@@ -298,7 +299,7 @@ class JustJoinItDownloader(BaseDownloader):
         """
 
     def download_jobs(self) -> None:
-        response = requests.get(self.jobs_url)
+        response = requests.get(self.jobs_url, timeout=10)
         try:
             response.raise_for_status()
         except requests.HTTPError:

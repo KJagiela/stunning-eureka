@@ -6,9 +6,9 @@ from rest_framework.generics import (
 )
 from rest_framework.response import Response
 
+from ..choices import HypeStatus
 from ..models import (
     Company,
-    HypeStatus,
     Job,
 )
 from .serializers import JobSerializer
@@ -38,9 +38,6 @@ class JobsListView(ListAPIView):
 
     def get_queryset(self):
         hype_status = HypeStatus(int(self.request.GET.get('type', 0)))
-        return (
-            Job.objects
-            .filter(status=hype_status)
-            .exclude(company__status=HypeStatus.FUCK_IT)
-            .prefetch_related('salary', 'company', 'category', 'technology')
-        )
+        return Job.objects.filter(status=hype_status).exclude(
+            company__status=HypeStatus.FUCK_IT,
+        ).prefetch_related('salary', 'company', 'category', 'technology')

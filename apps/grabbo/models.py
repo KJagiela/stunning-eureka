@@ -1,16 +1,10 @@
 from django.db import models
 
+from .choices import HypeStatus
 from .managers import (
     CompanyManager,
     JobManager,
 )
-
-
-class HypeStatus(models.IntegerChoices):
-    UNKNOWN = 0  # special case
-    FUCK_IT = 1
-    INTERESTED = 2
-    HYPED = 3
 
 
 class JobBoard(models.Model):
